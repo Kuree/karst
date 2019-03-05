@@ -2,9 +2,9 @@ from setuptools import setup
 
 
 setup(
-    name='memgen',
+    name='karst',
     packages=[
-        "memgen"
+        "karst"
     ],
     install_requires=[
         "hwtypes",
