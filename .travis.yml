@@ -11,3 +11,6 @@ script:
              --cov karst
              -v --cov-report term-missing tests
 
+notifications:
+  email:
+    on_success: never
