@@ -1,4 +1,4 @@
-from memgen.model import *
+from karst.backend import *
 import pytest
 import random
 

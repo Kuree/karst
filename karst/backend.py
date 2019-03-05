@@ -10,6 +10,23 @@ class PortType(enum.Enum):
     Out = enum.auto()
 
 
+class ClockGenerator:
+    def __init__(self):
+        self.__circuits = []
+
+    def get_clk(self, circuit: "Circuit"):
+        clk = Port("clk", PortType.In, 1)
+        self.__circuits.append(circuit)
+        return clk
+
+    def step(self):
+        for circuit in self.__circuits:
+            circuit.step()
+
+
+CLOCK_GENERATOR = ClockGenerator()
+
+
 class Port:
     def __init__(self, name: str, port_type: PortType, bit_width: int):
         assert isinstance(port_type, PortType)
@@ -48,7 +65,7 @@ class Port:
 
 class Circuit:
     def __init__(self):
-        self.__clk = Port("clk", PortType.In, 1)
+        self.__clk = CLOCK_GENERATOR.get_clk(self)
 
     @property
     def clk(self) -> Port:
@@ -69,10 +86,11 @@ class Circuit:
         else:
             raise ValueError(f"Unsupported value type {type(value)}")
 
-    def step(self):
-        self.__clk.value = ~self.__clk.value
         if self.__clk.value == 1:
             self.rise_edge()
+
+    def step(self):
+        self.clk = ~self.__clk.value
 
     def rise_edge(self):
         pass
@@ -125,15 +143,15 @@ class Memory(Circuit):
             self.__data[addr.as_uint()] = data_in
 
 
-class MemoryModel(Circuit):
+class MemoryBackend(Circuit):
     """Models single port memory"""
     def __init__(self, num_ports: int, bit_width: int, mems: List[Memory]):
         super().__init__()
 
         assert isinstance(num_ports, int)
         assert isinstance(bit_width, int)
-        self.__num_ports = num_ports
-        self.__bit_width = bit_width
+        self._num_ports = num_ports
+        self._bit_width = bit_width
 
         # this is how many memory banks you have
         # making sure it has the same size
@@ -149,6 +167,7 @@ class MemoryModel(Circuit):
         # we already check the num of memories
         extra_addr = int(math.log2(num_mem))
         self.__addr_width = extra_addr + mems[0].addr_width
+        self._extra_addr = extra_addr
 
         self.ports: Dict[str, Port] = {}
 
@@ -164,10 +183,9 @@ class MemoryModel(Circuit):
         return self.ports[item]
 
 
-class SRAM(MemoryModel):
+class SRAM(MemoryBackend):
     """Models SRAM"""
-    def __init__(self, num_ports: int, bit_width: int, mems: List[Memory],
-                 clk: Port):
+    def __init__(self, num_ports: int, bit_width: int, mems: List[Memory]):
         super().__init__(num_ports, bit_width, mems)
 
         # current SRAM implementation only supports one output port
@@ -182,9 +200,8 @@ class SRAM(MemoryModel):
         self.__data_out = Port("data_out", PortType.Out, bit_width)
         self.__data_in = Port("data_in", PortType.In, bit_width)
 
-        clk.wire(self.clk)
         for mem in self._mems:
-            self.__addr.wire(mem.addr)
+            self.__data_in.wire(mem.data_in)
 
     # any properties are combination logics
     @property
@@ -218,7 +235,8 @@ class SRAM(MemoryModel):
 
     def combinational(self):
         # combinational logic here
-        bank = self.__addr.value % self._mems[0].addr_width
+        addr = self.__addr.value
+        bank = addr // self._mems[0].addr_width
         # transform this into a case statement in verilog
         for index, mem in enumerate(self._mems):
             if index == bank:
@@ -227,10 +245,13 @@ class SRAM(MemoryModel):
             else:
                 mem.ren.value = 0
                 mem.wen.value = 0
+            mem.addr.value = \
+                BitVector[mem.addr_width](((1 << mem.addr_width)
+                                           - 1) & addr.as_uint())
 
     @property
     def data_out(self):
-        bank = self.__addr.value % self._mems[0].addr_width
+        bank = self.__addr.value // self._mems[0].addr_width
         for index, mem in enumerate(self._mems):
             if index == bank:
                 return mem.data_out
@@ -241,5 +262,24 @@ class SRAM(MemoryModel):
 
     @data_in.setter
     def data_in(self, value):
-        for mem in self._mems:
-            mem.data_in = value
+        self.__data_in.value = value
+
+
+class FifoModel(MemoryBackend):
+    """Models SRAM"""
+    def __init__(self, num_ports: int, bit_width: int, mems: List[Memory]):
+        super().__init__(num_ports, bit_width, mems)
+
+        # current FIFO implementation only supports one output port
+        assert num_ports == 1, "Only support 1 output port"
+        # determine whether we use wide-bank implementation
+        self.__is_wide_bank = bit_width != mems[0].bit_width
+
+        self.__wen = Port("wen", PortType.In, bit_width)
+        self.__ren = Port("ren", PortType.In, bit_width)
+        self.__addr = Port("addr", PortType.In, self.addr_width)
+
+        self.__data_out = Port("data_out", PortType.Out, bit_width)
+        self.__data_in = Port("data_in", PortType.In, bit_width)
+
+
