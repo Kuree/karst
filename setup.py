@@ -8,5 +8,6 @@ setup(
     ],
     install_requires=[
         "hwtypes",
+        "astor",
     ],
 )
