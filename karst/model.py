@@ -100,7 +100,7 @@ class MemoryModel:
 
         def __call__(self, f):
             def wrapper():
-                f()
+                return f()
             self.model._actions[self.name] = wrapper
             # perform AST analysis to in order to lower it to RTL
             txt = inspect.getsource(f)
@@ -130,6 +130,8 @@ def define_sram(size: int):
         sram_model.expect(ren == 1)
         sram_model.expect(wen == 0)
         data_out(sram_model[addr])
+
+        return data_out
 
     @sram_model.action("write")
     def write():
@@ -185,10 +187,11 @@ def define_fifo(size: int):
             almost_empty(1)
         else:
             almost_empty(0)
+        return data_out
 
-    @fifo_model.action("evaluate")
-    def evaluate():
-        # update state that can be changed in other actions
+    @fifo_model.action("update")
+    def update():
+        # update state that can be changed in multiple actions
         # this is just to make RTL generation easier
         if ren == 1 and wen == 0:
             word_count(word_count - 1)
@@ -224,8 +227,12 @@ def define_line_buffer(depth):
         lb_model.expect(word_count > 0)
         data_out(lb_model[read_addr])
 
-    @lb_model.action("evaluate")
-    def evaluate():
+        return data_out
+
+    @lb_model.action("update")
+    def update():
+        # update state that can be changed in multiple actions
+        # this is just to make RTL generation easier
         if word_count >= depth and wen:
             valid(1)
         elif word_count < depth:
