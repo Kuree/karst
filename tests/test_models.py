@@ -18,6 +18,16 @@ def test_fifo():
     fifo.data_in(42)
     fifo.enqueue()
     out = fifo.dequeue()
-    fifo.update()
     assert out == 42
     assert fifo.almost_empty == 1
+    fifo.data_in(43)
+    fifo.enqueue()
+    fifo.data_in(44)
+    fifo.enqueue()
+    fifo.data_in(45)
+    fifo.enqueue()
+    assert fifo.almost_empty == 0
+
+
+if __name__ == "__main__":
+    test_fifo()

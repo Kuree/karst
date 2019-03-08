@@ -5,6 +5,7 @@ from karst.values import *
 class Memory:
     def __init__(self, size: int):
         self._data = [0 for _ in range(size)]
+        self._access_count = 0
 
     def __getitem__(self, item: Variable) -> "__MemoryAccess":
         assert isinstance(item, Variable)
@@ -12,7 +13,8 @@ class Memory:
 
     class __MemoryAccess(Value):
         def __init__(self, mem: "Memory", var: Variable):
-            super().__init__()
+            super().__init__(f"mem_{mem._access_count}")
+            mem._access_count += 1
             self.mem = mem
             self.var = var
 
@@ -54,10 +56,12 @@ class MemoryModel:
         self._ports[name] = port
         return port
 
-    def define_port_out(self, name: str, bit_width: int) -> Port:
+    def define_port_out(self, name: str, bit_width: int,
+                        value: int = 0) -> Port:
         if name in self._ports:
             return self._ports[name]
         port = Port(name, bit_width, PortType.Out)
+        port.value = value
         self._ports[name] = port
         return port
 
@@ -150,7 +154,7 @@ def define_fifo(size: int):
     data_out = fifo_model.PortOut("data_out", 16)
     wen = fifo_model.PortIn("wen", 1)
     data_in = fifo_model.PortIn("data_in", 16)
-    almost_empty = fifo_model.PortOut("almost_empty", 1)
+    almost_empty = fifo_model.PortOut("almost_empty", 1, 1)
     almost_full = fifo_model.PortOut("almost_full", 1)
 
     # state control variables
@@ -169,7 +173,11 @@ def define_fifo(size: int):
         write_addr((write_addr + 1) % mem_size)
         word_count((word_count + 1) % mem_size)
 
-        # set the control flag. this will also test ast parsing
+        if word_count < 3:
+            almost_empty(1)
+        else:
+            almost_empty(0)
+
         if word_count > mem_size - 3:
             almost_full(1)
         else:
@@ -182,21 +190,19 @@ def define_fifo(size: int):
         data_out(fifo_model[read_addr])
         # state update
         read_addr(read_addr + 1)
+        word_count((word_count - 1) % mem_size)
 
         if word_count < 3:
             almost_empty(1)
         else:
             almost_empty(0)
-        return data_out
 
-    @fifo_model.action("update")
-    def update():
-        # update state that can be changed in multiple actions
-        # this is just to make RTL generation easier
-        if ren == 1 and wen == 0:
-            word_count(word_count - 1)
-        elif ren == 0 and wen + 1:
-            word_count(word_count + 1)
+        if word_count > mem_size - 3:
+            almost_full(1)
+        else:
+            almost_full(0)
+
+        return data_out
 
     return fifo_model
 

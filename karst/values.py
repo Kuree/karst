@@ -1,109 +1,130 @@
 from typing import Union
 import enum
+import operator
+import abc
 
 
 class Value:
-    def __init__(self):
-        self.value = 0
+    def __init__(self, name: str):
+        self.name = name
 
+    @abc.abstractmethod
     def eval(self):
-        return self.value
+        pass
 
     # overload every operator that verilog supports
     def __eq__(self, other):
-        if isinstance(other, Value):
-            return self.eval() == other.eval()
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            return self.eval() == other
+            value = other
+        return Expression(self, value, operator.eq)
 
     def __add__(self, other: Union["Value", int]):
-        if isinstance(other, Value):
-            v = other.eval()
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() + v)
+            value = other
+        return Expression(self, value, operator.add)
 
-    def __sub__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __sub__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() - v)
+            value = other
+        return Expression(self, value, operator.sub)
 
-    def __mul__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __mul__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() * v)
+            value = other
+        return Expression(self, value, operator.mul)
 
-    def __mod__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __mod__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() % v)
+            value = other
+        return Expression(self, value, operator.mod)
 
-    def __gt__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __gt__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() > v)
+            value = other
+        return Expression(self, value, operator.gt)
 
-    def __ge__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __ge__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() >= v)
+            value = other
+        return Expression(self, value, operator.ge)
 
-    def __lt__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __lt__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() < v)
+            value = other
+        return Expression(self, value, operator.lt)
 
-    def __le__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __le__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() < v)
+            value = other
+        return Expression(self, value, operator.le)
 
-    def __rshift__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __rshift__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() >> v)
+            value = other
+        return Expression(self, value, operator.rshift)
 
-    def __lshift__(self, other):
-        if isinstance(other, Value):
-            v = other.eval()
+    def __lshift__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
         else:
-            v = other
-        return Const(self.eval() << v)
+            value = other
+        return Expression(self, value, operator.lshift)
 
 
 class Variable(Value):
     def __init__(self, name: str, bit_width: int, value: int = 0):
-        super().__init__()
+        super().__init__(name)
         self.name = name
         self.bit_width = bit_width
 
         self.value = value
 
     def __call__(self, value: Union["Value", "Const", int]):
-        if isinstance(value, int):
-            value = value
+        if isinstance(value, Value):
+            self.value = value.eval()
         else:
-            value = value.eval()
-        self.value = value
+            self.value = value
 
     def eval(self):
-        return self.value
+        if isinstance(self.value, int):
+            return self.value
+        else:
+            assert isinstance(self.value, Value)
+            return self.value.eval()
+
+    def __repr__(self):
+        return self.name
 
 
 @enum.unique
@@ -117,8 +138,42 @@ class Port(Variable):
         super().__init__(name, bit_width)
         self.port_type = port_type
 
+    def __repr__(self):
+        return self.name
+
 
 class Const(Value):
     def __init__(self, value: int):
-        super().__init__()
+        super().__init__(f"const_{value}")
         self.value = value
+
+    def eval(self):
+        return self.value
+
+    def __repr__(self):
+        return str(self.value)
+
+
+class Expression(Value):
+    __counter = 0
+
+    def __init__(self, left: Value, right: Value, op):
+        super().__init__(f"exp_{Expression.__counter}")
+        Expression.__counter += 1
+        self.left = left
+        self.right = right
+        self.op = op
+
+    def eval(self):
+        left = self.left.eval()
+        right = self.right.eval()
+        v = self.op(left, right)
+        return v
+
+    def __bool__(self):
+        v = self.eval()
+        assert isinstance(v, int)
+        return bool(v)
+
+    def __repr__(self):
+        return f"({self.left} {self.op.__name__} {self.right})"
