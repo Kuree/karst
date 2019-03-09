@@ -29,8 +29,9 @@ def test_fifo():
     assert fifo.almost_empty == 0
 
 
-def _test_line_buffer():
+def test_line_buffer():
     lb = define_line_buffer(2, 2)
+    lb.reset()
     lb.data_in(42)
     lb.enqueue()
     lb.data_in(43)
@@ -40,8 +41,5 @@ def _test_line_buffer():
     lb.data_in(45)
     lb.enqueue()
     outs = lb.dequeue()
-    print(outs)
+    assert outs[0] == 42 and outs[1] == 44
 
-
-if __name__ == "__main__":
-    test_line_buffer()

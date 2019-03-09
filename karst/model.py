@@ -290,9 +290,15 @@ def define_line_buffer(depth, rows: int):
         lb_model.expect(valid == 1)
         lb_model.expect(word_count > 0)
         for idx in range(rows):
-            data_outs[idx](lb_model[read_addr + depth * i])
+            data_outs[idx](lb_model[read_addr + depth * idx])
 
         read_addr(read_addr + 1)
         lb_model.Return(data_outs)
+
+    @lb_model.action("reset")
+    def reset():
+        read_addr(0)
+        write_addr(0)
+        word_count(0)
 
     return lb_model
