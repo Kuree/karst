@@ -276,23 +276,28 @@ def define_line_buffer(depth, rows: int):
 
     depth = lb_model.Constant("depth", depth)
     num_row = lb_model.Constant("num_row", rows)
+    buffer_size = lb_model.Constant("buffer_size", depth * rows)
 
     @lb_model.action("enqueue")
     def enqueue():
         lb_model.expect(wen == 1)
         lb_model[write_addr](data_in)
         # state update
-        write_addr((write_addr + 1) % (depth * num_row))
+        write_addr((write_addr + 1) % buffer_size)
         word_count(word_count + 1)
+
+        lb_model.If((write_addr - read_addr) >= buffer_size,
+                    valid(1)).Else(valid(0))
 
     @lb_model.action("dequeue")
     def dequeue():
         lb_model.expect(valid == 1)
         lb_model.expect(word_count > 0)
         for idx in range(rows):
-            data_outs[idx](lb_model[read_addr + depth * idx])
+            data_outs[idx](lb_model[(read_addr + depth * idx) % buffer_size])
 
         read_addr(read_addr + 1)
+
         lb_model.Return(data_outs)
 
     @lb_model.action("reset")

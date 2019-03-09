@@ -44,6 +44,9 @@ class Value:
             value = other
         return Expression(self, value, operator.add)
 
+    def __radd__(self, other: Union["Value", int]):
+        return self + other
+
     def __sub__(self, other: Union["Value", int]):
         if not isinstance(other, Value):
             assert isinstance(other, int)
@@ -67,6 +70,10 @@ class Value:
         else:
             value = other
         return Expression(self, value, operator.mod)
+
+    def __rmod__(self, other: int):
+        value = Const(other)
+        return Expression(value, self, operator.mod)
 
     def __gt__(self, other: Union["Value", int]):
         if not isinstance(other, Value):
@@ -209,6 +216,8 @@ class Expression(Value):
         left = self.left.eval()
         right = self.right.eval()
         v = self.op(left, right)
+        while not isinstance(v, int):
+            v = v.eval()
         return v
 
     def __bool__(self):
