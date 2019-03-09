@@ -5,7 +5,10 @@ import abc
 
 
 class Statement:
-    pass
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.parent.context.append(self)
 
     @abc.abstractmethod
     def eval(self):
@@ -18,6 +21,10 @@ class Value:
 
     @abc.abstractmethod
     def eval(self):
+        pass
+
+    @abc.abstractmethod
+    def copy(self):
         pass
 
     # overload every operator that verilog supports
@@ -111,8 +118,8 @@ class Value:
 
 
 class AssignStatement(Statement):
-    def __init__(self, left: "Variable", right: Value):
-        super().__init__()
+    def __init__(self, left: "Variable", right: Value, parent):
+        super().__init__(parent)
         self.left = left
         self.right = right
 
@@ -120,18 +127,8 @@ class AssignStatement(Statement):
         return f"{self.left} = {self.right}"
 
     def eval(self):
-        self.left(self.right)
-
-
-class ReturnStatement(Statement):
-    def __init__(self, values: Union[List["Variable"], "Variable"]):
-        super().__init__()
-        if isinstance(values, Variable):
-            values = [values]
-        self.values = values
-
-    def eval(self):
-        return [v.eval() for v in self.values]
+        # we update the parent values
+        return self.left(self.right)
 
 
 class Variable(Value):
@@ -149,7 +146,7 @@ class Variable(Value):
         else:
             self.value = value
         # assignment is a statement
-        self.parent.context.append(AssignStatement(self, value))
+        return AssignStatement(self, value, self.parent)
 
     def eval(self):
         if isinstance(self.value, int):
@@ -160,6 +157,9 @@ class Variable(Value):
 
     def __repr__(self):
         return self.name
+
+    def copy(self):
+        return self
 
 
 @enum.unique
@@ -188,6 +188,9 @@ class Const(Value):
     def __repr__(self):
         return str(self.value)
 
+    def copy(self):
+        return Const(self.value)
+
 
 class Expression(Value):
     __counter = 0
@@ -212,3 +215,6 @@ class Expression(Value):
 
     def __repr__(self):
         return f"({self.left} {self.op.__name__} {self.right})"
+
+    def copy(self):
+        return Expression(self.left.copy(), self.right.copy(), self.op)

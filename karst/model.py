@@ -1,16 +1,17 @@
 import inspect
-from karst.ops import *
+from karst.stmt import *
+
 
 class Memory:
     def __init__(self, size: int, parent):
         self._data = [0 for _ in range(size)]
         self.parent = parent
 
-    def __getitem__(self, item: Variable) -> "__MemoryAccess":
+    def __getitem__(self, item: Variable) -> "_MemoryAccess":
         assert isinstance(item, Variable)
-        return self.__MemoryAccess(self, item, self.parent)
+        return self._MemoryAccess(self, item, self.parent)
 
-    class __MemoryAccess(Value):
+    class _MemoryAccess(Value):
         def __init__(self, mem: "Memory", var: Variable, parent):
             super().__init__(f"mem_{var.name}")
             self.mem = mem
@@ -27,10 +28,13 @@ class Memory:
             else:
                 value = other
             self.mem._data[self.var.eval()] = value
-            self.parent.context.append(AssignStatement(self, other))
+            return AssignStatement(self, other, self.parent)
 
         def __repr__(self):
             return f"memory[{self.var.name}]"
+
+        def copy(self):
+            return Memory._MemoryAccess(self.mem, self.var, self.parent)
 
 
 class MemoryModel:
@@ -88,7 +92,7 @@ class MemoryModel:
 
     def __getattr__(self, item: str) -> Union[Variable]:
         if item in self._actions:
-            return self._actions[item]
+            return self.__eval_stmts(item)
         elif item in self._ports:
             return self._ports[item]
         elif item in self._variables:
@@ -102,6 +106,10 @@ class MemoryModel:
         if_ = If(self)
         if_(predicate, expr)
         return if_
+
+    def define_return(self, value: Union[List[Value], Value]):
+        return_ = ReturnStatement(value, self)
+        return return_
 
     def expect(self, _):
         # TODO parse the expression and set the expected values
@@ -126,12 +134,32 @@ class MemoryModel:
             self.model.ast_text[self.name] = txt
             return wrapper
 
+    def __eval_stmts(self, action_name: str):
+        def wrapper():
+            if action_name not in self.stmts:
+                # call the action and then store the stmts
+                for name_, action in self._actions.items():
+                    action()
+                if "reset" in self._actions:
+                    # reset it
+                    self._actions["reset"]()
+            stmts = self.stmts[action_name]
+            for stmt in stmts:
+                v = stmt.eval()
+                if isinstance(stmt, ReturnStatement):
+                    if len(v) == 1:
+                        return v[0]
+                    else:
+                        return v
+        return wrapper
+
     # alias
     Variable = define_variable
     PortIn = define_port_in
     PortOut = define_port_out
     Constant = define_const
     If = define_if
+    Return = define_return
 
 
 def define_sram(size: int):
@@ -151,7 +179,7 @@ def define_sram(size: int):
         sram_model.expect(wen == 0)
         data_out(sram_model[addr])
 
-        return data_out
+        sram_model.Return(data_out)
 
     @sram_model.action("write")
     def write():
@@ -218,7 +246,15 @@ def define_fifo(size: int):
                       ).Else(
             almost_full(0))
 
-        return data_out
+        fifo_model.Return(data_out)
+
+    @fifo_model.action("reset")
+    def reset():
+        read_addr(0)
+        write_addr(0)
+        word_count(0)
+        almost_empty(1)
+        almost_full(0)
 
     return fifo_model
 
