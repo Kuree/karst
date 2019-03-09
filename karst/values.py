@@ -1,7 +1,15 @@
-from typing import Union
+from typing import Union, List
 import enum
 import operator
 import abc
+
+
+class Statement:
+    pass
+
+    @abc.abstractmethod
+    def eval(self):
+        pass
 
 
 class Value:
@@ -102,19 +110,46 @@ class Value:
         return Expression(self, value, operator.lshift)
 
 
+class AssignStatement(Statement):
+    def __init__(self, left: "Variable", right: Value):
+        super().__init__()
+        self.left = left
+        self.right = right
+
+    def __repr__(self):
+        return f"{self.left} = {self.right}"
+
+    def eval(self):
+        self.left(self.right)
+
+
+class ReturnStatement(Statement):
+    def __init__(self, values: Union[List["Variable"], "Variable"]):
+        super().__init__()
+        if isinstance(values, Variable):
+            values = [values]
+        self.values = values
+
+    def eval(self):
+        return [v.eval() for v in self.values]
+
+
 class Variable(Value):
-    def __init__(self, name: str, bit_width: int, value: int = 0):
+    def __init__(self, name: str, bit_width: int, parent, value: int = 0):
         super().__init__(name)
         self.name = name
         self.bit_width = bit_width
 
         self.value = value
+        self.parent = parent
 
     def __call__(self, value: Union["Value", "Const", int]):
         if isinstance(value, Value):
             self.value = value.eval()
         else:
             self.value = value
+        # assignment is a statement
+        self.parent.context.append(AssignStatement(self, value))
 
     def eval(self):
         if isinstance(self.value, int):
@@ -134,8 +169,8 @@ class PortType(enum.Enum):
 
 
 class Port(Variable):
-    def __init__(self, name: str, bit_width: int, port_type: PortType):
-        super().__init__(name, bit_width)
+    def __init__(self, name: str, bit_width: int, port_type: PortType, parent):
+        super().__init__(name, bit_width, parent)
         self.port_type = port_type
 
     def __repr__(self):
