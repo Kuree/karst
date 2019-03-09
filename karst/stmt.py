@@ -39,7 +39,5 @@ class ReturnStatement(Statement):
 
         self.parent = parent
 
-        parent.context.append(self)
-
     def eval(self):
         return [v.eval() for v in self.values]

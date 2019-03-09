@@ -191,6 +191,9 @@ class Const(Value):
     def copy(self):
         return Const(self.value)
 
+    def __int__(self):
+        return self.value
+
 
 class Expression(Value):
     __counter = 0

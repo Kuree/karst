@@ -7,12 +7,12 @@ class Memory:
         self._data = [0 for _ in range(size)]
         self.parent = parent
 
-    def __getitem__(self, item: Variable) -> "_MemoryAccess":
-        assert isinstance(item, Variable)
+    def __getitem__(self, item: Value) -> "_MemoryAccess":
+        assert isinstance(item, Value)
         return self._MemoryAccess(self, item, self.parent)
 
     class _MemoryAccess(Value):
-        def __init__(self, mem: "Memory", var: Variable, parent):
+        def __init__(self, mem: "Memory", var: Value, parent):
             super().__init__(f"mem_{var.name}")
             self.mem = mem
             self.var = var
@@ -20,14 +20,16 @@ class Memory:
             self.parent = parent
 
         def eval(self):
-            return self.mem._data[self.var.eval()]
+            v = self.var.eval()
+            return self.mem._data[v]
 
         def __call__(self, other: Union[Value, int]):
             if isinstance(other, Value):
                 value = other.eval()
             else:
                 value = other
-            self.mem._data[self.var.eval()] = value
+            index = self.var.eval()
+            self.mem._data[index] = value
             return AssignStatement(self, other, self.parent)
 
         def __repr__(self):
@@ -259,9 +261,11 @@ def define_fifo(size: int):
     return fifo_model
 
 
-def define_line_buffer(depth):
-    lb_model = MemoryModel(depth)
-    data_out = lb_model.PortOut("data_out", 16)
+def define_line_buffer(depth, rows: int):
+    lb_model = MemoryModel(depth * rows)
+    data_outs = []
+    for i in range(rows):
+        data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
     wen = lb_model.PortIn("wen", 1)
     data_in = lb_model.PortIn("data_in", 16)
     valid = lb_model.PortOut("valid", 1)
@@ -271,31 +275,24 @@ def define_line_buffer(depth):
     word_count = lb_model.Variable("word_count", 16, 0)
 
     depth = lb_model.Constant("depth", depth)
+    num_row = lb_model.Constant("num_row", rows)
 
     @lb_model.action("enqueue")
     def enqueue():
         lb_model.expect(wen == 1)
         lb_model[write_addr](data_in)
         # state update
-        write_addr((write_addr + 1) % depth)
+        write_addr((write_addr + 1) % (depth * num_row))
+        word_count(word_count + 1)
 
     @lb_model.action("dequeue")
     def dequeue():
         lb_model.expect(valid == 1)
         lb_model.expect(word_count > 0)
-        data_out(lb_model[read_addr])
+        for idx in range(rows):
+            data_outs[idx](lb_model[read_addr + depth * i])
 
-        return data_out
+        read_addr(read_addr + 1)
+        lb_model.Return(data_outs)
 
-    @lb_model.action("update")
-    def update():
-        # update state that can be changed in multiple actions
-        # this is just to make RTL generation easier
-        if word_count >= depth and wen:
-            valid(1)
-        elif word_count < depth:
-            word_count(word_count + 1)
-        else:
-            # not wen
-            valid(0)
-            word_count(word_count - 1)
+    return lb_model
