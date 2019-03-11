@@ -9,6 +9,6 @@ setup(
     install_requires=[
         "hwtypes",
         "astor",
-        "sympy",
+        "z3-solver",
     ],
 )
