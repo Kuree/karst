@@ -1,5 +1,6 @@
 from karst.model import *
-from typing import Dict
+from karst.stmt import *
+from typing import Dict, Tuple
 import z3
 
 
@@ -110,3 +111,49 @@ def get_linear_spacing(*args):
     int_sum = sum(int_set)
     expected_sum = minimum + (len(int_set) - 1) * value * len(int_set) // 2
     return int_sum == expected_sum
+
+
+def visit_mem_access(tree: Union[Variable, Expression, Statement]):
+    if isinstance(tree, If):
+        # it has two expressions
+        r_1 = visit_mem_access(tree.expression)
+        r_2 = visit_mem_access(tree.else_expression)
+        return r_1 + r_2
+    elif isinstance(tree, ReturnStatement):
+        # it can only be read access
+        result = []
+        for value in tree.values:
+            if isinstance(value, Memory.MemoryAccess):
+                result.append((value, Memory.MemoryAccessType.Read))
+        return result
+    elif isinstance(tree, AssignStatement):
+        # this is probably the one we need to care about
+        left = tree.left
+        right = tree.right
+        result = []
+        if isinstance(left, Memory.MemoryAccess):
+            result.append((left, Memory.MemoryAccessType.Write))
+        if isinstance(right, Memory.MemoryAccess):
+            result.append((right, Memory.MemoryAccessType.Read))
+        return result
+    elif isinstance(tree, Expression):
+        r_left = visit_mem_access(tree.left)
+        r_right = visit_mem_access(tree.right)
+        return r_left + r_right
+    else:
+        return []
+
+
+def get_memory_access(model: MemoryModel)-> \
+        Dict[str, List[Tuple[Memory.MemoryAccess, Memory.MemoryAccessType]]]:
+    statements = model.produce_statements()
+    # recursive visit the statements
+    result = {}
+    for name, stmts in statements.items():
+        entry = []
+        for stmt in stmts:
+            r = visit_mem_access(stmt)
+            if len(r) > 0:
+                entry += r
+        result[name] = entry
+    return result

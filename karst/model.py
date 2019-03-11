@@ -1,4 +1,5 @@
 import inspect
+import enum
 from karst.stmt import *
 
 
@@ -7,11 +8,16 @@ class Memory:
         self._data = [0 for _ in range(size)]
         self.parent = parent
 
-    def __getitem__(self, item: Value) -> "_MemoryAccess":
+    def __getitem__(self, item: Value) -> "MemoryAccess":
         assert isinstance(item, Value)
-        return self._MemoryAccess(self, item, self.parent)
+        return self.MemoryAccess(self, item, self.parent)
 
-    class _MemoryAccess(Value):
+    @enum.unique
+    class MemoryAccessType(enum.Enum):
+        Read = enum.auto()
+        Write = enum.auto()
+
+    class MemoryAccess(Value):
         def __init__(self, mem: "Memory", var: Value, parent):
             super().__init__(f"mem_{var.name}")
             self.mem = mem
@@ -36,7 +42,7 @@ class Memory:
             return f"memory[{self.var.name}]"
 
         def copy(self):
-            return Memory._MemoryAccess(self.mem, self.var, self.parent)
+            return Memory.MemoryAccess(self.mem, self.var, self.parent)
 
 
 class MemoryModel:
@@ -153,20 +159,21 @@ class MemoryModel:
         return list(self._actions.keys())
 
     def get_conditions(self):
-        self.__produce_statements()
+        self.produce_statements()
         # return a copy
         return self._conditions.copy()
 
-    def __produce_statements(self):
+    def produce_statements(self):
         for name, action in self._actions.items():
             if name not in self._stmts:
                 # generate expressions
                 action()
+        return self._stmts
 
     def __eval_stmts(self, action_name: str):
         def wrapper():
             if action_name not in self._stmts:
-                self.__produce_statements()
+                self.produce_statements()
             stmts = self._stmts[action_name]
             for stmt in stmts:
                 v = stmt.eval()

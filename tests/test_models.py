@@ -43,6 +43,3 @@ def test_line_buffer():
     assert lb.valid == 1
     outs = lb.dequeue()
     assert outs[0] == 42 and outs[1] == 44
-
-
-test_line_buffer()
