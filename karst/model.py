@@ -46,6 +46,7 @@ class MemoryModel:
         self._consts = {}
 
         self._actions = {}
+        self._conditions = {}
         self._mem = Memory(size, self)
 
         self.ast_text = {}
@@ -113,20 +114,27 @@ class MemoryModel:
         return_ = ReturnStatement(value, self)
         return return_
 
-    def expect(self, _):
-        # TODO parse the expression and set the expected values
-        pass
-
     class _Action:
         def __init__(self, name: str, model: "MemoryModel"):
             self.name = name
             self.model = model
 
         def __call__(self, f):
+            def expect(expr: Expression):
+                if self.name not in self.model._conditions:
+                    self.model._conditions[self.name] = []
+                self.model._conditions[self.name].append(expr)
+
             def wrapper():
                 # we need to record every expressions here
+                # TODO: fix this hack
                 self.model.context.clear()
-                v = f()
+                # extract the parameters
+                args = inspect.signature(f)
+                if "expect" in args.parameters:
+                    v = f(expect)
+                else:
+                    v = f()
                 # copy to the statement
                 self.model._stmts[self.name] = self.model.context[:]
                 return v
@@ -184,19 +192,19 @@ def define_sram(size: int):
     data_in = sram_model.PortIn("data_in", 16)
 
     @sram_model.action("read")
-    def read():
+    def read(expect):
         # specify action conditions
-        sram_model.expect(ren == 1)
-        sram_model.expect(wen == 0)
+        expect(ren == 1)
+        expect(wen == 0)
         data_out(sram_model[addr])
 
         sram_model.Return(data_out)
 
     @sram_model.action("write")
-    def write():
+    def write(expect):
         # specify action conditions
-        sram_model.expect(ren == 0)
-        sram_model.expect(wen == 1)
+        expect(ren == 0)
+        expect(wen == 1)
         sram_model[addr](data_in)
 
     return sram_model
@@ -220,9 +228,9 @@ def define_fifo(size: int):
     mem_size = fifo_model.Constant("mem_size", size)
 
     @fifo_model.action("enqueue")
-    def enqueue():
-        fifo_model.expect(wen == 1)
-        fifo_model.expect(word_count < mem_size)
+    def enqueue(expect):
+        expect(wen == 1)
+        expect(word_count < mem_size)
         fifo_model[write_addr](data_in)
         # state update
         write_addr((write_addr + 1) % mem_size)
@@ -239,9 +247,9 @@ def define_fifo(size: int):
                       almost_full(0))
 
     @fifo_model.action("dequeue")
-    def dequeue():
-        fifo_model.expect(ren == 1)
-        fifo_model.expect(word_count > 0)
+    def dequeue(expect):
+        expect(ren == 1)
+        expect(word_count > 0)
         data_out(fifo_model[read_addr])
         # state update
         read_addr(read_addr + 1)
@@ -288,8 +296,8 @@ def define_line_buffer(depth, rows: int):
     buffer_size = lb_model.Constant("buffer_size", depth * rows)
 
     @lb_model.action("enqueue")
-    def enqueue():
-        lb_model.expect(wen == 1)
+    def enqueue(expect):
+        expect(wen == 1)
         lb_model[write_addr](data_in)
         # state update
         write_addr((write_addr + 1) % buffer_size)
@@ -299,9 +307,9 @@ def define_line_buffer(depth, rows: int):
                     valid(1)).Else(valid(0))
 
     @lb_model.action("dequeue")
-    def dequeue():
-        lb_model.expect(valid == 1)
-        lb_model.expect(word_count > 0)
+    def dequeue(expect):
+        expect(valid == 1)
+        expect(word_count > 0)
         for idx in range(rows):
             data_outs[idx](lb_model[(read_addr + depth * idx) % buffer_size])
 
