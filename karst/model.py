@@ -152,7 +152,12 @@ class MemoryModel:
     def get_action_names(self):
         return list(self._actions.keys())
 
-    def __get_statements(self):
+    def get_conditions(self):
+        self.__produce_statements()
+        # return a copy
+        return self._conditions.copy()
+
+    def __produce_statements(self):
         for name, action in self._actions.items():
             if name not in self._stmts:
                 # generate expressions
@@ -161,7 +166,7 @@ class MemoryModel:
     def __eval_stmts(self, action_name: str):
         def wrapper():
             if action_name not in self._stmts:
-                self.__get_statements()
+                self.__produce_statements()
             stmts = self._stmts[action_name]
             for stmt in stmts:
                 v = stmt.eval()
