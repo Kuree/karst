@@ -2,6 +2,7 @@ from karst.model import *
 from karst.stmt import *
 from typing import Dict, Tuple
 import z3
+import operator
 
 
 def construct_sym_expr_tree(expression: Union[Expression, Variable],
@@ -75,11 +76,43 @@ def __abs(x):
     return z3.If(x >= 0, x, -x)
 
 
-def get_linear_spacing(*args):
+def preprocess_expressions(*args: Union[Expression, Variable]):
+    """remove the mod expression at the end to help z3 to simplify
+    expressions"""
+    has_mod = True
+    expressions = list(args)
+    for exp in expressions:
+        if isinstance(exp, Expression):
+            if exp.op != operator.mod:
+                has_mod = False
+                break
+    if not has_mod:
+        return expressions
+    mod_value = None
+    for exp in expressions:
+        if isinstance(exp, Expression):
+            if mod_value is None:
+                mod_value = exp.right
+            else:
+                if not mod_value.eq(exp.right):
+                    return expressions
+    # remove the mod at the end
+    new_exps = []
+    for exp in expressions:
+        if isinstance(exp, Expression):
+            new_exps.append(exp.left)
+        else:
+            new_exps.append(exp)
+    return new_exps
+
+
+def get_linear_spacing(*args: Union[Expression, Variable]):
     # this function only handles one single variable
     symbol_table = {}
     expressions = []
-    for exp in args:
+    # preprocess the expressions and variables
+    processed = preprocess_expressions(*args)
+    for exp in processed:
         smt_expr = construct_sym_expr_tree(exp, symbol_table)
         expressions.append(smt_expr)
     assert len(symbol_table) == 1, "Only one variable allowed"
@@ -90,7 +123,7 @@ def get_linear_spacing(*args):
         for exp2 in expressions[idx + 1:]:
             r = z3.simplify(__abs(exp1 - exp2))
             if not isinstance(r, z3.IntNumRef) or not r.is_int():
-                return False
+                return False, 1
             ints.append(r.as_long())
     int_set = set(ints)
     opt = z3.Optimize()
@@ -101,7 +134,7 @@ def get_linear_spacing(*args):
     opt.maximize(gcd)
     r = opt.check()
     if r != z3.sat:
-        return False
+        return False, 1
     result = opt.model()
     value = result.eval(gcd).as_long()
     # this is the actual gcd
@@ -110,7 +143,7 @@ def get_linear_spacing(*args):
     minimum = min(int_set)
     int_sum = sum(int_set)
     expected_sum = minimum + (len(int_set) - 1) * value * len(int_set) // 2
-    return int_sum == expected_sum
+    return int_sum == expected_sum, value
 
 
 def visit_mem_access(tree: Union[Variable, Expression, Statement]):
@@ -155,5 +188,46 @@ def get_memory_access(model: MemoryModel)-> \
             r = visit_mem_access(stmt)
             if len(r) > 0:
                 entry += r
-        result[name] = entry
+        # filter out the empty one
+        if entry:
+            result[name] = entry
     return result
+
+
+def get_var_memory_access(access_pattern:
+                          List[Tuple[Memory.MemoryAccess,
+                                     Memory.MemoryAccessType]]):
+    access_expressions = []
+    for access, t in access_pattern:
+        exp = access.var
+        access_expressions.append((exp, t))
+
+    # we need to separate the memory access by address lines
+    # because the linear spacing only handles one variable
+    def __get_variable(exp_: Union[Expression, Variable, Const]) \
+            -> Union[Variable, None]:
+        if isinstance(exp_, Expression):
+            left = __get_variable(exp_.left)
+            right = __get_variable(exp_.right)
+            if left is None:
+                return right
+            elif right is None:
+                return left
+            else:
+                assert left.name == right.name, "only one variable supported"
+        elif isinstance(exp_, Variable):
+            return exp_
+        else:
+            return None
+
+    variable_access: Dict[Variable,
+                          List[Tuple[Expression,
+                                     Memory.MemoryAccessType]]] = {}
+    for exp, t in access_expressions:
+        v = __get_variable(exp)
+        assert v is not None
+        if v not in variable_access:
+            variable_access[v] = []
+        variable_access[v].append((exp, t))
+
+    return variable_access

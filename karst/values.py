@@ -27,6 +27,10 @@ class Value:
     def copy(self):
         pass
 
+    @abc.abstractmethod
+    def eq(self, other: "Value"):
+        pass
+
     # overload every operator that verilog supports
     def __eq__(self, other):
         if not isinstance(other, Value):
@@ -168,6 +172,14 @@ class Variable(Value):
     def copy(self):
         return self
 
+    def eq(self, other: Value):
+        if not isinstance(other, Variable):
+            return False
+        return self.name == other.name
+
+    def __hash__(self):
+        return self.name.__hash__()
+
 
 @enum.unique
 class PortType(enum.Enum):
@@ -186,6 +198,8 @@ class Port(Variable):
 
 class Const(Value):
     def __init__(self, value: int):
+        if isinstance(value, Value):
+            value = value.eval()
         super().__init__(f"const_{value}")
         self.value = value
 
@@ -200,6 +214,11 @@ class Const(Value):
 
     def __int__(self):
         return self.value
+
+    def eq(self, other: "Value"):
+        if not isinstance(other, Const):
+            return False
+        return other.value == self.value
 
 
 class Expression(Value):
@@ -230,3 +249,11 @@ class Expression(Value):
 
     def copy(self):
         return Expression(self.left.copy(), self.right.copy(), self.op)
+
+    def eq(self, other: "Expression"):
+        if not isinstance(other, Expression):
+            return False
+        left = self.left.eq(other.left)
+        right = self.right.eq(other.right)
+        op = self.op == other.op
+        return left and right and op
