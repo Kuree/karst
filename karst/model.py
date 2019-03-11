@@ -51,7 +51,7 @@ class MemoryModel:
         self.ast_text = {}
         self.mem_size = size
 
-        self.stmts = {}
+        self._stmts = {}
 
         self.context = []
 
@@ -128,7 +128,7 @@ class MemoryModel:
                 self.model.context.clear()
                 v = f()
                 # copy to the statement
-                self.model.stmts[self.name] = self.model.context[:]
+                self.model._stmts[self.name] = self.model.context[:]
                 return v
             self.model._actions[self.name] = wrapper
             # perform AST analysis to in order to lower it to RTL
@@ -136,16 +136,25 @@ class MemoryModel:
             self.model.ast_text[self.name] = txt
             return wrapper
 
+    def get_stmt(self, name: str):
+        if name not in self._stmts:
+            self._actions[name]()
+        return self._stmts[name]
+
+    def get_action_names(self):
+        return list(self._actions.keys())
+
+    def __get_statements(self):
+        for name, action in self._actions.items():
+            if name not in self._stmts:
+                # generate expressions
+                action()
+
     def __eval_stmts(self, action_name: str):
         def wrapper():
-            if action_name not in self.stmts:
-                # call the action and then store the stmts
-                for name_, action in self._actions.items():
-                    action()
-                if "reset" in self._actions:
-                    # reset it
-                    self._actions["reset"]()
-            stmts = self.stmts[action_name]
+            if action_name not in self._stmts:
+                self.__get_statements()
+            stmts = self._stmts[action_name]
             for stmt in stmts:
                 v = stmt.eval()
                 if isinstance(stmt, ReturnStatement):
@@ -286,7 +295,7 @@ def define_line_buffer(depth, rows: int):
         write_addr((write_addr + 1) % buffer_size)
         word_count(word_count + 1)
 
-        lb_model.If((write_addr - read_addr) >= buffer_size,
+        lb_model.If(word_count >= buffer_size,
                     valid(1)).Else(valid(0))
 
     @lb_model.action("dequeue")
