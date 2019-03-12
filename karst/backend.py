@@ -274,6 +274,8 @@ def get_updated_variables(stmts: List[AssignStatement]):
     # we use z3 to simplifier the problem
     for stmt in stmts:
         right = stmt.right
+        if isinstance(right, Memory.MemoryAccess):
+            continue
         z3_exp = construct_sym_expr_tree(right, {})
         if isinstance(z3_exp, int):
             continue

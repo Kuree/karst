@@ -112,10 +112,14 @@ def test_line_buffer_memory_access(num_row, line_size):
 def test_fifo_update_states():
     fifo = define_fifo(20)
     statements = fifo.produce_statements()
-    for name, stmts in statements.items():
-        updates = get_state_updates(stmts)
-        variable_update = get_updated_variables(updates)
-        assert len(variable_update) == 2
+    stmts = statements["enqueue"]
+    updates = get_state_updates(stmts)
+    variable_update = get_updated_variables(updates)
+    assert len(variable_update) == 2
+    stmts = statements["dequeue"]
+    updates = get_state_updates(stmts)
+    variable_update = get_updated_variables(updates)
+    assert len(variable_update) == 2
 
 
 def test_lb_update_states():
@@ -123,7 +127,11 @@ def test_lb_update_states():
     line_size = 10
     lb = define_line_buffer(line_size, num_row)
     statements = lb.produce_statements()
-    for name, stmts in statements.items():
-        updates = get_state_updates(stmts)
-        variable_update = get_updated_variables(updates)
-        assert len(variable_update) == 2
+    stmts = statements["enqueue"]
+    updates = get_state_updates(stmts)
+    variable_update = get_updated_variables(updates)
+    assert len(variable_update) == 2
+    stmts = statements["dequeue"]
+    updates = get_state_updates(stmts)
+    variable_update = get_updated_variables(updates)
+    assert len(variable_update) == 2

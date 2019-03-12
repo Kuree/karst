@@ -325,7 +325,11 @@ def define_line_buffer(depth, rows: int):
         for idx in range(rows):
             data_outs[idx](lb_model[(read_addr + depth * idx) % buffer_size])
 
-        read_addr(read_addr + 1)
+        read_addr((read_addr + 1) % buffer_size)
+        word_count(word_count - 1)
+
+        lb_model.If(word_count >= buffer_size,
+                    valid(1)).Else(valid(0))
 
         lb_model.Return(data_outs)
 
