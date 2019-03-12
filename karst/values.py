@@ -14,6 +14,10 @@ class Statement:
     def eval(self):
         pass
 
+    @abc.abstractmethod
+    def eq(self, other: "Statement"):
+        pass
+
 
 class Value:
     def __init__(self, name: str):
@@ -140,6 +144,14 @@ class AssignStatement(Statement):
     def eval(self):
         # we update the parent values
         return self.left(self.right)
+
+    def eq(self, other: "Statement"):
+        if not isinstance(other, AssignStatement):
+            return False
+        if isinstance(self.right, int):
+            return self.left.eq(other.left) and self.right == other.right
+        else:
+            return self.left.eq(other.left) and self.right.eq(other.right)
 
 
 class Variable(Value):

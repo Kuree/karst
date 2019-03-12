@@ -13,6 +13,8 @@ def construct_sym_expr_tree(expression: Union[Expression, Variable],
         if expression.name not in symbol_table:
             symbol_table[expression.name] = z3.Int(expression.name)
         return symbol_table[expression.name]
+    elif isinstance(expression, int):
+        return expression
 
     left = expression.left
     right = expression.right
@@ -108,6 +110,9 @@ def preprocess_expressions(*args: Union[Expression, Variable]):
 
 def get_linear_spacing(*args: Union[Expression, Variable]):
     # this function only handles one single variable
+    if len(args) == 1:
+        # this is a special case
+        return True, 0
     symbol_table = {}
     expressions = []
     # preprocess the expressions and variables
@@ -231,3 +236,48 @@ def get_var_memory_access(access_pattern:
         variable_access[v].append((exp, t))
 
     return variable_access
+
+
+def get_state_updates(expressions):
+    def __visit_assignments(node_):
+        if isinstance(node_, Expression):
+            return __visit_assignments(node_.left) +\
+                   __visit_assignments(node_.right)
+        elif isinstance(node_, AssignStatement):
+            return [node_]
+        elif isinstance(node_, If):
+            return __visit_assignments(node_.expression) + \
+                   __visit_assignments(node_.else_expression)
+        else:
+            return []
+    stmts = []
+    for exp in expressions:
+        r = __visit_assignments(exp)
+        r = [node for node in r if not isinstance(node.left,
+                                                  Memory.MemoryAccess)]
+        if r:
+            stmts += r
+    # a brute force filter to avoid duplicates
+    result = set()
+    for stmt in stmts:
+        for stmt_ in result:
+            if stmt.eq(stmt_):
+                continue
+        result.add(stmt)
+    return result
+
+
+def get_updated_variables(stmts: List[AssignStatement]):
+    """get a list of assignment statements that use variables to update
+    the values"""
+    result = []
+    # we use z3 to simplifier the problem
+    for stmt in stmts:
+        right = stmt.right
+        z3_exp = construct_sym_expr_tree(right, {})
+        if isinstance(z3_exp, int):
+            continue
+        z3_exp = z3.simplify(z3_exp)
+        if not isinstance(z3_exp, z3.IntNumRef) or not z3_exp.is_int():
+            result.append(stmt)
+    return result

@@ -1,4 +1,5 @@
 from karst.backend import *
+import pytest
 
 
 def test_condition_extraction():
@@ -85,9 +86,9 @@ def test_fifo_memory_access():
     assert fifo.read_addr in get_var_memory_access(dequeue)
 
 
-def test_line_buffer_memory_access():
-    num_row = 4
-    line_size = 10
+@pytest.mark.parametrize("num_row", [1, 4])
+@pytest.mark.parametrize("line_size", [10, 20])
+def test_line_buffer_memory_access(num_row, line_size):
     lb = define_line_buffer(line_size, num_row)
     access = get_memory_access(lb)
     enqueue = access["enqueue"]
@@ -104,4 +105,25 @@ def test_line_buffer_memory_access():
         read_expr.append(exp)
     pred, space = get_linear_spacing(*read_expr)
     assert pred
-    assert space == line_size
+    if num_row > 1:
+        assert space == line_size
+
+
+def test_fifo_update_states():
+    fifo = define_fifo(20)
+    statements = fifo.produce_statements()
+    for name, stmts in statements.items():
+        updates = get_state_updates(stmts)
+        variable_update = get_updated_variables(updates)
+        assert len(variable_update) == 2
+
+
+def test_lb_update_states():
+    num_row = 4
+    line_size = 10
+    lb = define_line_buffer(line_size, num_row)
+    statements = lb.produce_statements()
+    for name, stmts in statements.items():
+        updates = get_state_updates(stmts)
+        variable_update = get_updated_variables(updates)
+        assert len(variable_update) == 2
