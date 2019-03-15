@@ -142,7 +142,7 @@ class MemoryModel:
                 self._variables[key]
             variable(value)
 
-    def define_if(self, predicate: Expression, expr: Expression):
+    def define_if(self, predicate: Union[Expression, bool], expr: Expression):
         if_ = If(self)
         return if_(predicate, expr)
 
@@ -173,18 +173,8 @@ class MemoryModel:
             self.model.ast_text[self.name] = txt
             return wrapper
 
-    def get_stmt(self, name: str):
-        if name not in self._stmts:
-            self._actions[name]()
-        return self._stmts[name]
-
     def get_action_names(self):
         return list(self._actions.keys())
-
-    def get_conditions(self):
-        self.produce_statements()
-        # return a copy
-        return self._conditions.copy()
 
     def produce_statements(self):
         for name, action in self._actions.items():

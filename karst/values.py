@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union
 import enum
 import operator
 import abc
@@ -12,11 +12,11 @@ class Statement:
 
     @abc.abstractmethod
     def eval(self):
-        pass
+        pass    # pragma: no cover
 
     @abc.abstractmethod
     def eq(self, other: "Statement"):
-        pass
+        pass    # pragma: no cover
 
 
 class Value:
@@ -25,15 +25,18 @@ class Value:
 
     @abc.abstractmethod
     def eval(self):
-        pass
+        pass    # pragma: no cover
 
     @abc.abstractmethod
     def copy(self):
-        pass
+        pass    # pragma: no cover
 
     @abc.abstractmethod
     def eq(self, other: "Value"):
-        pass
+        pass    # pragma: no cover
+
+    def __hash__(self):
+        return self.name.__hash__()
 
     # overload every operator that verilog supports
     def __eq__(self, other):
@@ -197,9 +200,6 @@ class Variable(Value):
             return False
         return self.name == other.name
 
-    def __hash__(self):
-        return self.name.__hash__()
-
 
 @enum.unique
 class PortType(enum.Enum):
@@ -213,7 +213,7 @@ class Port(Variable):
         self.port_type = port_type
 
     def __repr__(self):
-        return self.name
+        return self.name    # pragma: no cover
 
 
 class Const(Value):
@@ -227,13 +227,13 @@ class Const(Value):
         return self.value
 
     def __repr__(self):
-        return str(self.value)
+        return str(self.value)    # pragma: no cover
 
     def copy(self):
         return Const(self.value)
 
     def __int__(self):
-        return self.value
+        return self.value    # pragma: no cover
 
     def eq(self, other: "Value"):
         if not isinstance(other, Const):

@@ -1,4 +1,5 @@
 from karst.values import *
+from typing import List
 
 
 class If(Statement):
@@ -13,8 +14,11 @@ class If(Statement):
         self.context = parent.context
         parent.context = []
 
-    def __call__(self, predicate: Expression, *args: Expression):
-        self.predicate = predicate
+    def __call__(self, predicate: Union[Expression, bool], *args: Expression):
+        if isinstance(predicate, bool):
+            self.predicate = Const(predicate)
+        else:
+            self.predicate = predicate
         self.expressions = list(args)
         self.parent.context = self.context
         self.context = []
@@ -73,4 +77,6 @@ class ReturnStatement(Statement):
     def eq(self, other: "Statement"):
         if not isinstance(other, ReturnStatement):
             return False
-        return self.values == other.values
+        # need to compare if they are returning the same thing
+        return len(self.values) == len(
+            other.values) and set(self.values) == set(other.values)

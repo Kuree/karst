@@ -22,23 +22,6 @@ def test_eq():
     assert not exp1.eq(1)
 
 
-def test_if_eq():
-    model = MemoryModel(42)
-    v1 = model.Variable("a", 1)
-    v2 = model.Variable("b", 1)
-    v3 = model.Variable("c", 1)
-    v4 = model.Variable("d", 1)
-
-    if_1 = model.If(v1 == v2, v1(0)).Else(v2(0))
-    if_2 = model.If(v1 == v2, v1(0)).Else(v3(0))
-    if_3 = model.If(v1 == v4, v1(0)).Else(v2(0))
-    if_4 = model.If(v1 == v2, v1(0)).Else(v2(0))
-
-    assert if_1.eq(if_4)
-    assert not if_1.eq(if_2)
-    assert not if_1.eq(if_3)
-
-
 def test_mul():
     model = MemoryModel(42)
     v1 = model.Variable("a", 4)
@@ -96,3 +79,37 @@ def test_sub():
     v1(5)
     assert (42 - v1).eval() == 42 - 5
     assert (v1 - 1).eval() == 5 - 1
+
+
+def test_nested_eval():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4)
+    v2 = model.Variable("b", 4)
+    v2(4)
+    v1.value = v2
+    assert v1 == 4
+
+
+def test_hash_repr():
+    v1 = Variable("a", 4, None)
+    v2 = Variable("b", 4, None)
+    assert hash(v1) != hash(v2)
+    assert str(v1) == "a"
+
+
+def test_add():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4)
+    v2 = model.Variable("b", 4)
+    v1(1)
+    v2(2)
+    assert (v1 + v2).eval() == 1 + 2
+    assert (1 + v1).eval() == 1 + 1
+
+
+def test_const():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4)
+    v1(1)
+    v2 = model.Constant("b", v1)
+    assert v2.eval() == 1

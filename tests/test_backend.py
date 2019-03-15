@@ -45,6 +45,25 @@ def test_linear_spacing():
     assert not get_linear_spacing(a, a + 3, a + 5)[0]
 
 
+def test_simple_memory_access():
+    parent = MemoryModel(10)
+    a = parent.Variable("a", 16)
+    b = parent.Variable("b", 16)
+    r = visit_mem_access(a + b)
+    assert not r
+
+
+def test_construct_sym_expr_tree():
+    symbol_table = {}
+    parent = MemoryModel(10)
+    a = parent.Variable("a", 16)
+    b = parent.Constant("b", 2)
+    construct_sym_expr_tree(b, symbol_table)
+    assert len(symbol_table) == 0
+    construct_sym_expr_tree(a, symbol_table)
+    assert len(symbol_table) == 1
+
+
 def test_sram_memory_access():
     sram = define_sram(100)
     access = get_memory_access(sram)

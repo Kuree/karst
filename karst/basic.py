@@ -49,26 +49,11 @@ def define_fifo(size: int):
         fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
         fifo_model.word_count = (fifo_model.word_count + 1) % mem_size
 
-        fifo_model.If(fifo_model.word_count < fifo_model.almost_threshold,
-                      fifo_model.almost_empty(1)
-                      ).Else(
-                      fifo_model.almost_empty(0))
-
-        fifo_model.If(fifo_model.word_count > mem_size -
-                      fifo_model.almost_threshold,
-                      fifo_model.almost_full(1)
-                      ).Else(
-                      fifo_model.almost_full(0))
-
-        # this can be optimized together with the dequeue
-        # we can use statement.eq() to test if it's equal
-        fifo_model.If(fifo_model.word_count < mem_size,
-                      fifo_model.RDY_enqueue(1)).Else(
-                      fifo_model.RDY_enqueue(0))
-
-        fifo_model.If(fifo_model.word_count > 0,
-                      fifo_model.RDY_dequeue(1)).Else(
-                      fifo_model.RDY_dequeue(0))
+        # notice that we can make function calls here as long as it's not
+        # annotated in action()
+        # the function calls will be executed as normal python code, same
+        # as if statement
+        update_state()
 
     @fifo_model.action("dequeue")
     def dequeue():
@@ -77,24 +62,7 @@ def define_fifo(size: int):
         fifo_model.read_addr = fifo_model.read_addr + 1
         fifo_model.word_count = (fifo_model.word_count - 1) % mem_size
 
-        fifo_model.If(fifo_model.word_count < fifo_model.almost_threshold,
-                      fifo_model.almost_empty(1)
-                      ).Else(
-                      fifo_model.almost_empty(0))
-
-        fifo_model.If(fifo_model.word_count > mem_size -
-                      fifo_model.almost_threshold,
-                      fifo_model.almost_full(1)
-                      ).Else(
-                      fifo_model.almost_full(0))
-
-        fifo_model.If(fifo_model.word_count < mem_size,
-                      fifo_model.RDY_enqueue(1)).Else(
-                      fifo_model.RDY_enqueue(0))
-
-        fifo_model.If(fifo_model.word_count > 0,
-                      fifo_model.RDY_dequeue(1)).Else(
-                      fifo_model.RDY_dequeue(0))
+        update_state()
 
         return fifo_model.data_out
 
@@ -107,6 +75,26 @@ def define_fifo(size: int):
         fifo_model.almost_full = 0
 
         fifo_model.RDY_enqueue = 1
+
+    def update_state():
+        fifo_model.If(fifo_model.word_count < fifo_model.almost_threshold,
+                      fifo_model.almost_empty(1)
+                      ).Else(
+                      fifo_model.almost_empty(0))
+
+        fifo_model.If(fifo_model.word_count > mem_size -
+                      fifo_model.almost_threshold,
+                      fifo_model.almost_full(1)
+                      ).Else(
+                      fifo_model.almost_full(0))
+
+        fifo_model.If(fifo_model.word_count < mem_size,
+                      fifo_model.RDY_enqueue(1)).Else(
+                      fifo_model.RDY_enqueue(0))
+
+        fifo_model.If(fifo_model.word_count > 0,
+                      fifo_model.RDY_dequeue(1)).Else(
+                      fifo_model.RDY_dequeue(0))
 
     return fifo_model
 
