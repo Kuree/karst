@@ -154,21 +154,12 @@ class MemoryModel:
             self.model = model
 
         def __call__(self, f):
-            def expect(expr: Expression):
-                if self.name not in self.model._conditions:
-                    self.model._conditions[self.name] = []
-                self.model._conditions[self.name].append(expr)
 
             def wrapper():
                 # we need to record every expressions here
                 # TODO: fix this hack
                 self.model.context.clear()
-                # extract the parameters
-                args = inspect.signature(f)
-                if "expect" in args.parameters:
-                    v = f(expect)
-                else:
-                    v = f()
+                v = f()
                 # copy to the statement
                 if v is not None:
                     self.model.Return(v)
@@ -234,19 +225,13 @@ def define_sram(size: int):
     sram_model.PortIn("data_in", 16)
 
     @sram_model.action("read")
-    def read(expect):
-        # specify action conditions
-        expect(sram_model.ren == 1)
-        expect(sram_model.wen == 0)
+    def read():
         sram_model.data_out = sram_model[sram_model.addr]
 
         return sram_model.data_out
 
     @sram_model.action("write")
-    def write(expect):
-        # specify action conditions
-        expect(sram_model.ren == 0)
-        expect(sram_model.wen == 1)
+    def write():
         sram_model[addr] = sram_model.data_in
 
     return sram_model
@@ -270,9 +255,7 @@ def define_fifo(size: int):
     mem_size = size
 
     @fifo_model.action("enqueue")
-    def enqueue(expect):
-        expect(fifo_model.wen == 1)
-        expect(fifo_model.word_count < fifo_model.mem_size)
+    def enqueue():
         fifo_model[fifo_model.write_addr] = fifo_model.data_in
         # state update
         fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
@@ -289,9 +272,7 @@ def define_fifo(size: int):
                       fifo_model.almost_full(0))
 
     @fifo_model.action("dequeue")
-    def dequeue(expect):
-        expect(fifo_model.ren == 1)
-        expect(fifo_model.word_count > 0)
+    def dequeue():
         fifo_model.data_out = fifo_model[fifo_model.read_addr]
         # state update
         fifo_model.read_addr = fifo_model.read_addr + 1
@@ -338,8 +319,7 @@ def define_line_buffer(depth, rows: int):
     buffer_size = depth * rows
 
     @lb_model.action("enqueue")
-    def enqueue(expect):
-        expect(lb_model.wen == 1)
+    def enqueue():
         lb_model[lb_model.write_addr] = lb_model.data_in
         # state update
         lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
@@ -350,9 +330,7 @@ def define_line_buffer(depth, rows: int):
                     lb_model.valid(0))
 
     @lb_model.action("dequeue")
-    def dequeue(expect):
-        expect(lb_model.valid == 1)
-        expect(lb_model.word_count > 0)
+    def dequeue():
         for idx in range(rows):
             # notice that we can't use data_outs[idx] = * syntax since
             # the assignment is handled through setattr in python
