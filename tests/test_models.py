@@ -31,6 +31,8 @@ def test_fifo():
     assert fifo.dequeue() == 43
     assert fifo.dequeue() == 44
     assert fifo.dequeue() == 45
+    # the queue is empty now
+    # assert control signals
     assert fifo.RDY_dequeue == 0
     # latch out the data
     assert fifo.dequeue() == 45

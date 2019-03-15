@@ -63,6 +63,14 @@ class Value:
             value = other
         return Expression(self, value, operator.sub)
 
+    def __rsub__(self, other):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
+        else:
+            value = other
+        return Expression(value, self, operator.sub)
+
     def __mul__(self, other: Union["Value", int]):
         if not isinstance(other, Value):
             assert isinstance(other, int)

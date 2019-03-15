@@ -87,3 +87,12 @@ def test_shift():
     v1(2 << 4)
     assert (v1 >> 2).eval() == 2 << 2
     assert (v1 >> v2).eval() == 2 << 1
+
+
+def test_sub():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4)
+
+    v1(5)
+    assert (42 - v1).eval() == 42 - 5
+    assert (v1 - 1).eval() == 5 - 1

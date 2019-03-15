@@ -26,7 +26,6 @@ def define_sram(size: int):
 def define_fifo(size: int):
     fifo_model = MemoryModel(size)
     # define ports here
-    fifo_model.PortIn("ren", 1)
     fifo_model.PortOut("data_out", 16)
     fifo_model.PortIn("wen", 1)
     fifo_model.PortIn("data_in", 16)
@@ -38,6 +37,9 @@ def define_fifo(size: int):
     fifo_model.Variable("write_addr", 16, 0)
     fifo_model.Variable("word_count", 16, 0)
 
+    # some other constants
+    fifo_model.Constant("almost_threshold", 3)
+
     mem_size = size
 
     @fifo_model.action("enqueue", 1)
@@ -47,16 +49,19 @@ def define_fifo(size: int):
         fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
         fifo_model.word_count = (fifo_model.word_count + 1) % mem_size
 
-        fifo_model.If(fifo_model.word_count < 3,
+        fifo_model.If(fifo_model.word_count < fifo_model.almost_threshold,
                       fifo_model.almost_empty(1)
                       ).Else(
                       fifo_model.almost_empty(0))
 
-        fifo_model.If(fifo_model.word_count > mem_size - 3,
+        fifo_model.If(fifo_model.word_count > mem_size -
+                      fifo_model.almost_threshold,
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
 
+        # this can be optimized together with the dequeue
+        # we can use statement.eq() to test if it's equal
         fifo_model.If(fifo_model.word_count < mem_size,
                       fifo_model.RDY_enqueue(1)).Else(
                       fifo_model.RDY_enqueue(0))
@@ -72,12 +77,13 @@ def define_fifo(size: int):
         fifo_model.read_addr = fifo_model.read_addr + 1
         fifo_model.word_count = (fifo_model.word_count - 1) % mem_size
 
-        fifo_model.If(fifo_model.word_count < 3,
+        fifo_model.If(fifo_model.word_count < fifo_model.almost_threshold,
                       fifo_model.almost_empty(1)
                       ).Else(
                       fifo_model.almost_empty(0))
 
-        fifo_model.If(fifo_model.word_count > mem_size - 3,
+        fifo_model.If(fifo_model.word_count > mem_size -
+                      fifo_model.almost_threshold,
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
@@ -99,6 +105,7 @@ def define_fifo(size: int):
         fifo_model.word_count = 0
         fifo_model.almost_empty = 1
         fifo_model.almost_full = 0
+
         fifo_model.RDY_enqueue = 1
 
     return fifo_model
@@ -109,7 +116,6 @@ def define_line_buffer(depth: int, rows: int):
     data_outs = []
     for i in range(rows):
         data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
-    lb_model.PortIn("wen", 1)
     lb_model.PortIn("data_in", 16)
     # state control variables
     lb_model.Variable("read_addr", 16, 0)
@@ -140,6 +146,7 @@ def define_line_buffer(depth: int, rows: int):
         for idx in range(rows):
             # notice that we can't use data_outs[idx] = * syntax since
             # the assignment is handled through setattr in python
+            # we use [] to access the variable here
             lb_model[f"data_out_{idx}"] = lb_model[(lb_model.read_addr +
                                                     depth * idx) %
                                                    buffer_size]
