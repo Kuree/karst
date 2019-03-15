@@ -103,7 +103,17 @@ class MemoryModel:
         return self._Action(name, self)
 
     def __getitem__(self, item):
-        return self._mem[item]
+        if isinstance(item, Value):
+            return self._mem[item]
+        else:
+            assert isinstance(item, str)
+            return getattr(self, item)
+
+    def __setitem__(self, key, value):
+        if isinstance(key, Value):
+            self._mem[key](value)
+        else:
+            return setattr(self, key, value)
 
     def __getattr__(self, item: str) -> Union[Variable]:
         if item in self._actions:
@@ -217,27 +227,27 @@ def define_sram(size: int):
     """Models the functional behavior of an one-output sram"""
     sram_model = MemoryModel(size)
     # define ports here
-    ren = sram_model.PortIn("ren", 1)
-    data_out = sram_model.PortOut("data_out", 16)
+    sram_model.PortIn("ren", 1)
+    sram_model.PortOut("data_out", 16)
     addr = sram_model.PortIn("addr", 16)
-    wen = sram_model.PortIn("wen", 1)
-    data_in = sram_model.PortIn("data_in", 16)
+    sram_model.PortIn("wen", 1)
+    sram_model.PortIn("data_in", 16)
 
     @sram_model.action("read")
     def read(expect):
         # specify action conditions
-        expect(ren == 1)
-        expect(wen == 0)
-        sram_model.data_out = sram_model[addr]
+        expect(sram_model.ren == 1)
+        expect(sram_model.wen == 0)
+        sram_model.data_out = sram_model[sram_model.addr]
 
         return sram_model.data_out
 
     @sram_model.action("write")
     def write(expect):
         # specify action conditions
-        expect(ren == 0)
-        expect(wen == 1)
-        sram_model[addr](data_in)
+        expect(sram_model.ren == 0)
+        expect(sram_model.wen == 1)
+        sram_model[addr] = sram_model.data_in
 
     return sram_model
 
@@ -245,67 +255,67 @@ def define_sram(size: int):
 def define_fifo(size: int):
     fifo_model = MemoryModel(size)
     # define ports here
-    ren = fifo_model.PortIn("ren", 1)
-    data_out = fifo_model.PortOut("data_out", 16)
-    wen = fifo_model.PortIn("wen", 1)
-    data_in = fifo_model.PortIn("data_in", 16)
-    almost_empty = fifo_model.PortOut("almost_empty", 1, 1)
-    almost_full = fifo_model.PortOut("almost_full", 1)
+    fifo_model.PortIn("ren", 1)
+    fifo_model.PortOut("data_out", 16)
+    fifo_model.PortIn("wen", 1)
+    fifo_model.PortIn("data_in", 16)
+    fifo_model.PortOut("almost_empty", 1, 1)
+    fifo_model.PortOut("almost_full", 1)
 
     # state control variables
-    read_addr = fifo_model.Variable("read_addr", 16, 0)
-    write_addr = fifo_model.Variable("write_addr", 16, 0)
-    word_count = fifo_model.Variable("word_count", 16, 0)
+    fifo_model.Variable("read_addr", 16, 0)
+    fifo_model.Variable("write_addr", 16, 0)
+    fifo_model.Variable("word_count", 16, 0)
 
-    mem_size = fifo_model.Constant("mem_size", size)
+    mem_size = size
 
     @fifo_model.action("enqueue")
     def enqueue(expect):
-        expect(wen == 1)
-        expect(word_count < mem_size)
-        fifo_model[write_addr](data_in)
+        expect(fifo_model.wen == 1)
+        expect(fifo_model.word_count < fifo_model.mem_size)
+        fifo_model[fifo_model.write_addr] = fifo_model.data_in
         # state update
         fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
         fifo_model.word_count = (fifo_model.word_count + 1) % mem_size
 
-        fifo_model.If(word_count < 3,
+        fifo_model.If(fifo_model.word_count < 3,
                       fifo_model.almost_empty(1)
                       ).Else(
-                      almost_empty(0))
+                      fifo_model.almost_empty(0))
 
-        fifo_model.If(word_count > mem_size - 3,
-                      almost_full(1)
+        fifo_model.If(fifo_model.word_count > mem_size - 3,
+                      fifo_model.almost_full(1)
                       ).Else(
-                      almost_full(0))
+                      fifo_model.almost_full(0))
 
     @fifo_model.action("dequeue")
     def dequeue(expect):
-        expect(ren == 1)
-        expect(word_count > 0)
-        fifo_model.data_out = fifo_model[read_addr]
+        expect(fifo_model.ren == 1)
+        expect(fifo_model.word_count > 0)
+        fifo_model.data_out = fifo_model[fifo_model.read_addr]
         # state update
         fifo_model.read_addr = fifo_model.read_addr + 1
         fifo_model.word_count = (fifo_model.word_count - 1) % mem_size
 
-        fifo_model.If(word_count < 3,
-                      almost_empty(1)
+        fifo_model.If(fifo_model.word_count < 3,
+                      fifo_model.almost_empty(1)
                       ).Else(
-                      almost_empty(0))
+                      fifo_model.almost_empty(0))
 
-        fifo_model.If(word_count > mem_size - 3,
-                      almost_full(1)
+        fifo_model.If(fifo_model.word_count > fifo_model.mem_size - 3,
+                      fifo_model.almost_full(1)
                       ).Else(
-                      almost_full(0))
+                      fifo_model.almost_full(0))
 
-        return data_out
+        return fifo_model.data_out
 
     @fifo_model.action("reset")
     def reset():
-        read_addr(0)
-        write_addr(0)
-        word_count(0)
-        almost_empty(1)
-        almost_full(0)
+        fifo_model.read_addr = 0
+        fifo_model.write_addr = 0
+        fifo_model.word_count = 0
+        fifo_model.almost_empty = 1
+        fifo_model.almost_full = 0
 
     return fifo_model
 
@@ -315,50 +325,54 @@ def define_line_buffer(depth, rows: int):
     data_outs = []
     for i in range(rows):
         data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
-    wen = lb_model.PortIn("wen", 1)
-    data_in = lb_model.PortIn("data_in", 16)
-    valid = lb_model.PortOut("valid", 1)
+    lb_model.PortIn("wen", 1)
+    lb_model.PortIn("data_in", 16)
+    lb_model.PortOut("valid", 1)
     # state control variables
-    read_addr = lb_model.Variable("read_addr", 16, 0)
-    write_addr = lb_model.Variable("write_addr", 16, 0)
-    word_count = lb_model.Variable("word_count", 16, 0)
+    lb_model.Variable("read_addr", 16, 0)
+    lb_model.Variable("write_addr", 16, 0)
+    lb_model.Variable("word_count", 16, 0)
 
-    depth = lb_model.Constant("depth", depth)
-    num_row = lb_model.Constant("num_row", rows)
-    buffer_size = lb_model.Constant("buffer_size", depth * rows)
+    lb_model.Constant("depth", depth)
+    lb_model.Constant("num_row", rows)
+    buffer_size = depth * rows
 
     @lb_model.action("enqueue")
     def enqueue(expect):
-        expect(wen == 1)
-        lb_model[write_addr](data_in)
+        expect(lb_model.wen == 1)
+        lb_model[lb_model.write_addr] = lb_model.data_in
         # state update
         lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count + 1
 
-        lb_model.If(word_count >= buffer_size,
-                    valid(1)).Else(
-                    valid(0))
+        lb_model.If(lb_model.word_count >= buffer_size,
+                    lb_model.valid(1)).Else(
+                    lb_model.valid(0))
 
     @lb_model.action("dequeue")
     def dequeue(expect):
-        expect(valid == 1)
-        expect(word_count > 0)
+        expect(lb_model.valid == 1)
+        expect(lb_model.word_count > 0)
         for idx in range(rows):
-            data_outs[idx](lb_model[(read_addr + depth * idx) % buffer_size])
+            # notice that we can't use data_outs[idx] = * syntax since
+            # the assignment is handled through setattr in python
+            lb_model[f"data_out_{idx}"] = lb_model[(lb_model.read_addr +
+                                                    depth * idx) %
+                                                   buffer_size]
 
         lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count - 1
 
-        lb_model.If(word_count >= buffer_size,
-                    valid(1)).Else(
-                    valid(0))
+        lb_model.If(lb_model.word_count >= buffer_size,
+                    lb_model.valid(1)).Else(
+                    lb_model.valid(0))
 
         return data_outs
 
     @lb_model.action("reset")
     def reset():
-        read_addr(0)
-        write_addr(0)
-        word_count(0)
+        lb_model.read_addr = 0
+        lb_model.write_addr = 0
+        lb_model.word_count = 0
 
     return lb_model

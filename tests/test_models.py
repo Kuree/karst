@@ -27,6 +27,9 @@ def test_fifo():
     fifo.data_in(45)
     fifo.enqueue()
     assert fifo.almost_empty == 0
+    assert fifo.dequeue() == 43
+    assert fifo.dequeue() == 44
+    assert fifo.dequeue() == 45
 
 
 def test_line_buffer():
