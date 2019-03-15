@@ -44,6 +44,10 @@ class Memory:
         def copy(self):
             return Memory.MemoryAccess(self.mem, self.var, self.parent)
 
+        def eq(self, other: "Value"):
+            return isinstance(other, Memory.MemoryAccess) and\
+                   self.mem == other.mem and self.var == other.var
+
 
 class MemoryModel:
     def __init__(self, size: int):
@@ -111,6 +115,11 @@ class MemoryModel:
         else:
             return object.__getattribute__(self, item)
 
+    def __setattr__(self, key, value):
+        #if key not in self._ports and key not in self._variables:
+        #    raise AttributeError(key)
+        object.__setattr__(self, key, value)
+
     def define_if(self, predicate: Expression, expr: Expression):
         if_ = If(self)
         if_(predicate, expr)
@@ -142,6 +151,8 @@ class MemoryModel:
                 else:
                     v = f()
                 # copy to the statement
+                if v is not None:
+                    self.model.Return(v)
                 self.model._stmts[self.name] = self.model.context[:]
                 return v
             self.model._actions[self.name] = wrapper
@@ -210,7 +221,7 @@ def define_sram(size: int):
         expect(wen == 0)
         data_out(sram_model[addr])
 
-        sram_model.Return(data_out)
+        return data_out
 
     @sram_model.action("write")
     def write(expect):
@@ -270,14 +281,14 @@ def define_fifo(size: int):
         fifo_model.If(word_count < 3,
                       almost_empty(1)
                       ).Else(
-            almost_empty(0))
+                      almost_empty(0))
 
         fifo_model.If(word_count > mem_size - 3,
                       almost_full(1)
                       ).Else(
-            almost_full(0))
+                      almost_full(0))
 
-        fifo_model.Return(data_out)
+        return data_out
 
     @fifo_model.action("reset")
     def reset():
@@ -316,7 +327,8 @@ def define_line_buffer(depth, rows: int):
         word_count(word_count + 1)
 
         lb_model.If(word_count >= buffer_size,
-                    valid(1)).Else(valid(0))
+                    valid(1)).Else(
+                    valid(0))
 
     @lb_model.action("dequeue")
     def dequeue(expect):
@@ -329,9 +341,10 @@ def define_line_buffer(depth, rows: int):
         word_count(word_count - 1)
 
         lb_model.If(word_count >= buffer_size,
-                    valid(1)).Else(valid(0))
+                    valid(1)).Else(
+                    valid(0))
 
-        lb_model.Return(data_outs)
+        return data_outs
 
     @lb_model.action("reset")
     def reset():

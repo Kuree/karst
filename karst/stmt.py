@@ -10,17 +10,23 @@ class If(Statement):
         self.expressions: List[Expression] = []
         self.else_expressions: List[Expression] = []
         # save the context
-        self.context = parent.context[:]
-        parent.context.clear()
+        self.context = parent.context
+        parent.context = []
 
     def __call__(self, predicate: Expression, *args: Expression):
         self.predicate = predicate
         self.expressions = list(args)
+        self.parent.context = self.context
+        self.context = []
 
     def else_(self, *args: Expression):
         self.else_expressions = list(args)
-        # restore the context since we branched off
-        self.parent.context = self.context
+        # remove the statements from the global context since we put it in the
+        # local else_expressions
+        num_statements = len(args)
+        for i in range(num_statements):
+            assert self.parent.context[-1] == args[-i]
+            self.parent.context.pop(-1)
 
     def eval(self):
         if self.predicate.eval():
