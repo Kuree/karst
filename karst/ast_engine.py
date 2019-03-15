@@ -6,7 +6,10 @@ import inspect
 
 
 class AssignNodeVisitor(ast.NodeTransformer):
-    def visit_Assign(self, node: ast.Assign):
+    def __init__(self):
+        super().__init__()
+
+    def visit_Assign(self, node):
         return ast.Call(func=node.targets[0], args=[node.value], keywords=[])
 
 
@@ -30,24 +33,3 @@ def convert_ast(model: MemoryModel, python_src: str):
     ast.fix_missing_locations(tree)
     co = compile(tree, "<ast>", "exec")
     exec(co)
-
-
-if __name__ == "__main__":
-    def foo():
-        class Foo:
-            def f(self):
-                return Foo()
-
-            def b(self):
-                pass
-        return Foo()
-
-
-    def test():
-        a = foo()
-        a.f().b()
-
-    src = inspect.getsource(test)
-    text = textwrap.dedent(src)
-    tree = ast.parse(text)
-    print(tree)

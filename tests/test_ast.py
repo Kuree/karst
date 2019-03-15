@@ -1,8 +1,9 @@
 from karst.ast_engine import *
 from karst.basic import *
+import astor
 
 
-def test_if_transform():
+def _test_if_transform():
     model = define_fifo(42)
     model.Variable("a", 1, 0)
     model.Variable("b", 1, 0)
@@ -26,10 +27,11 @@ def test_assign_transform():
 
     test = TestClass()
 
-    def _test_assign():
-        test = 2
-
-    txt = textwrap.dedent(inspect.getsource(_test_assign))
+    txt = "test = 2"
     tree = ast.parse(txt)
-    AssignNodeVisitor.visit(tree)
+    visitor = AssignNodeVisitor()
+    visitor.visit(tree)
     ast.fix_missing_locations(tree)
+    src = astor.to_source(tree)
+    eval(src)
+    assert test.value == 2
