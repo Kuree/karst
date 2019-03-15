@@ -28,8 +28,6 @@ def convert_ast(model: MemoryModel, python_src: str):
     program_txt = textwrap.dedent(python_src)
     tree = ast.parse(program_txt)
 
-    if_visit = IfNodeVisitor(model)
-    tree = if_visit.visit(tree)
-    ast.fix_missing_locations(tree)
-    co = compile(tree, "<ast>", "exec")
-    exec(co)
+    # first pass to change all the assignment into function call
+    assign = AssignNodeVisitor()
+
