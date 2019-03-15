@@ -10,7 +10,11 @@ install:
 script:
     - pytest --codestyle
              --cov karst
+             --cov-report=xml
              -v --cov-report term-missing tests
+
+after_success:
+  - codecov
 
 notifications:
   email:

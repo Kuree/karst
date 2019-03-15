@@ -18,6 +18,7 @@ class If(Statement):
         self.expressions = list(args)
         self.parent.context = self.context
         self.context = []
+        return self
 
     def else_(self, *args: Expression):
         self.else_expressions = list(args)
@@ -27,6 +28,7 @@ class If(Statement):
         for i in range(num_statements):
             assert self.parent.context[-1] == args[-i]
             self.parent.context.pop(-1)
+        return self
 
     def eval(self):
         if self.predicate.eval():

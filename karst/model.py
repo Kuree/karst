@@ -144,8 +144,7 @@ class MemoryModel:
 
     def define_if(self, predicate: Expression, expr: Expression):
         if_ = If(self)
-        if_(predicate, expr)
-        return if_
+        return if_(predicate, expr)
 
     def define_return(self, value: Union[List[Value], Value]):
         return_ = ReturnStatement(value, self)
