@@ -1,5 +1,4 @@
 import inspect
-import enum
 from karst.stmt import *
 
 
@@ -51,6 +50,7 @@ class Memory:
 
 class MemoryModel:
     def __init__(self, size: int):
+        self._initialized = False
         self._variables = {}
         self._ports = {}
         self._consts = {}
@@ -65,6 +65,8 @@ class MemoryModel:
         self._stmts = {}
 
         self.context = []
+
+        self._initialized = True
 
     def define_variable(self, name: str, bit_width: int,
                         value: int = 0) -> Variable:
@@ -116,9 +118,16 @@ class MemoryModel:
             return object.__getattribute__(self, item)
 
     def __setattr__(self, key, value):
-        #if key not in self._ports and key not in self._variables:
-        #    raise AttributeError(key)
-        object.__setattr__(self, key, value)
+        if key == "_initialized":
+            self.__dict__[key] = value
+        elif not self._initialized:
+            self.__dict__[key] = value
+        elif key in self.__dict__:
+            self.__dict__[key] = value
+        else:
+            variable = self._ports[key] if key in self._ports else \
+                self._variables[key]
+            variable(value)
 
     def define_if(self, predicate: Expression, expr: Expression):
         if_ = If(self)
@@ -219,9 +228,9 @@ def define_sram(size: int):
         # specify action conditions
         expect(ren == 1)
         expect(wen == 0)
-        data_out(sram_model[addr])
+        sram_model.data_out = sram_model[addr]
 
-        return data_out
+        return sram_model.data_out
 
     @sram_model.action("write")
     def write(expect):
@@ -256,11 +265,11 @@ def define_fifo(size: int):
         expect(word_count < mem_size)
         fifo_model[write_addr](data_in)
         # state update
-        write_addr((write_addr + 1) % mem_size)
-        word_count((word_count + 1) % mem_size)
+        fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
+        fifo_model.word_count = (fifo_model.word_count + 1) % mem_size
 
         fifo_model.If(word_count < 3,
-                      almost_empty(1)
+                      fifo_model.almost_empty(1)
                       ).Else(
                       almost_empty(0))
 
@@ -273,10 +282,10 @@ def define_fifo(size: int):
     def dequeue(expect):
         expect(ren == 1)
         expect(word_count > 0)
-        data_out(fifo_model[read_addr])
+        fifo_model.data_out = fifo_model[read_addr]
         # state update
-        read_addr(read_addr + 1)
-        word_count((word_count - 1) % mem_size)
+        fifo_model.read_addr = fifo_model.read_addr + 1
+        fifo_model.word_count = (fifo_model.word_count - 1) % mem_size
 
         fifo_model.If(word_count < 3,
                       almost_empty(1)
@@ -323,8 +332,8 @@ def define_line_buffer(depth, rows: int):
         expect(wen == 1)
         lb_model[write_addr](data_in)
         # state update
-        write_addr((write_addr + 1) % buffer_size)
-        word_count(word_count + 1)
+        lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
+        lb_model.word_count = lb_model.word_count + 1
 
         lb_model.If(word_count >= buffer_size,
                     valid(1)).Else(
@@ -337,8 +346,8 @@ def define_line_buffer(depth, rows: int):
         for idx in range(rows):
             data_outs[idx](lb_model[(read_addr + depth * idx) % buffer_size])
 
-        read_addr((read_addr + 1) % buffer_size)
-        word_count(word_count - 1)
+        lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
+        lb_model.word_count = lb_model.word_count - 1
 
         lb_model.If(word_count >= buffer_size,
                     valid(1)).Else(
