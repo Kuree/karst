@@ -1,6 +1,8 @@
 from karst.backend import *
 import pytest
 
+from karst.basic import define_sram, define_fifo, define_line_buffer
+
 
 def test_condition_extraction():
     fifo = define_fifo(10)
