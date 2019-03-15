@@ -47,7 +47,7 @@ def define_fifo(size: int):
         fifo_model[fifo_model.write_addr] = fifo_model.data_in
         # state update
         fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
-        fifo_model.word_count = (fifo_model.word_count + 1) % mem_size
+        fifo_model.word_count = fifo_model.word_count + 1
 
         # notice that we can make function calls here as long as it's not
         # annotated in action()
@@ -119,36 +119,17 @@ def define_line_buffer(depth: int, rows: int):
         lb_model[lb_model.write_addr] = lb_model.data_in
         # state update
         lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
-        lb_model.word_count = lb_model.word_count + 1
 
-        lb_model.If(lb_model.word_count <= buffer_size,
-                    lb_model.RDY_enqueue(1)).Else(
-                    lb_model.RDY_enqueue(0))
-
-        lb_model.If(lb_model.word_count >= buffer_size,
-                    lb_model.RDY_dequeue(1)).Else(
-                    lb_model.RDY_dequeue(0))
-
-    @lb_model.action("dequeue")
-    def dequeue():
         for idx in range(rows):
-            # notice that we can't use data_outs[idx] = * syntax since
-            # the assignment is handled through setattr in python
-            # we use [] to access the variable here
-            lb_model[f"data_out_{idx}"] = lb_model[(lb_model.read_addr +
-                                                    depth * idx) %
-                                                   buffer_size]
+            data_outs[idx](lb_model[(lb_model.read_addr + depth * idx)
+                                    % buffer_size])
 
-        lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
-        lb_model.word_count = lb_model.word_count - 1
+        lb_model.If(lb_model.word_count >= buffer_size - 1,
+                    lb_model.read_addr((lb_model.read_addr + 1) % buffer_size))
 
-        lb_model.If(lb_model.word_count <= buffer_size,
-                    lb_model.RDY_enqueue(1)).Else(
-                    lb_model.RDY_enqueue(0))
-
-        lb_model.If(lb_model.word_count >= buffer_size,
-                    lb_model.RDY_dequeue(1)).Else(
-                    lb_model.RDY_dequeue(0))
+        lb_model.If(lb_model.word_count < buffer_size,
+                    lb_model.word_count(lb_model.word_count + 1),
+                    )
 
         return data_outs
 
@@ -157,7 +138,7 @@ def define_line_buffer(depth: int, rows: int):
         lb_model.read_addr = 0
         lb_model.write_addr = 0
         lb_model.word_count = 0
-
+        # line buffer is already ready to enqueue
         lb_model.RDY_enqueue = 1
 
     return lb_model

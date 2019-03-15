@@ -14,8 +14,12 @@ def test_sram():
 
 
 def test_fifo():
-    fifo = define_fifo(100)
+    fifo_depth = 10
+    fifo = define_fifo(fifo_depth)
     fifo.clear()
+    # try to dequeue an empty queue
+    fifo.dequeue()
+    assert fifo.RDY_dequeue == 0
     fifo.data_in = 42
     fifo.enqueue()
     out = fifo.dequeue()
@@ -37,6 +41,13 @@ def test_fifo():
     # latch out the data
     assert fifo.dequeue() == 45
 
+    # make it full
+    for i in range(fifo_depth):
+        fifo.enqueue()
+    assert fifo.RDY_enqueue == 0
+    # nothing happens
+    fifo.enqueue()
+
 
 def test_line_buffer():
     lb = define_line_buffer(2, 2)
@@ -45,16 +56,8 @@ def test_line_buffer():
     lb.enqueue()
     lb.data_in = 43
     lb.enqueue()
-    # not ready
-    assert lb.RDY_dequeue == 0
-    # this dequeue should matter
-    outs = lb.dequeue()
-    # it should latch the zero result
-    assert outs[0] == 0 and outs[1] == 0
     lb.data_in = 44
     lb.enqueue()
     lb.data_in = 45
-    lb.enqueue()
-    assert lb.RDY_dequeue == 1
-    outs = lb.dequeue()
+    outs = lb.enqueue()
     assert outs[0] == 42 and outs[1] == 44

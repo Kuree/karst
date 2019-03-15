@@ -92,7 +92,7 @@ class MemoryModel:
         self._ports[name] = port
         return port
 
-    def define_const(self, name: str, value: int):
+    def define_const(self, name: str, value: Union[int, Variable]):
         if name in self._consts:
             return self._consts[name]
         const = Const(value)

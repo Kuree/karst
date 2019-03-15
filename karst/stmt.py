@@ -10,9 +10,6 @@ class If(Statement):
         self.predicate: Expression = None
         self.expressions: List[Expression] = []
         self.else_expressions: List[Expression] = []
-        # save the context
-        self.context = parent.context
-        parent.context = []
 
     def __call__(self, predicate: Union[Expression, bool], *args: Expression):
         if isinstance(predicate, bool):
@@ -20,8 +17,12 @@ class If(Statement):
         else:
             self.predicate = predicate
         self.expressions = list(args)
-        self.parent.context = self.context
-        self.context = []
+        # remove the expressions from parent context
+        num_statements = len(self.expressions)
+        for i in range(num_statements):
+            # the last one is the if statement
+            assert self.parent.context[-2].eq(self.expressions[-i])
+            self.parent.context.pop(-2)
         return self
 
     def else_(self, *args: Expression):

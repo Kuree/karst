@@ -108,11 +108,9 @@ def test_line_buffer_memory_access(num_row, line_size):
     lb = define_line_buffer(line_size, num_row)
     access = get_memory_access(lb)
     enqueue = access["enqueue"]
-    dequeue = access["dequeue"]
-    assert len(enqueue) == 1
-    assert len(dequeue) == num_row
-    # we'll focus on dequeue since it's more interesting
-    dequeue_exps = get_var_memory_access(dequeue)
+    assert len(enqueue) == num_row + 1
+    dequeue_exps = get_var_memory_access(enqueue)
+    # we'll focus on read out since it's more interesting
     dequeue_exps = dequeue_exps[lb.read_addr]
     assert len(dequeue_exps) == num_row
     read_expr = []
@@ -146,8 +144,4 @@ def test_lb_update_states():
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)
     variable_update = get_updated_variables(updates)
-    assert len(variable_update) == 2
-    stmts = statements["dequeue"]
-    updates = get_state_updates(stmts)
-    variable_update = get_updated_variables(updates)
-    assert len(variable_update) == 2
+    assert len(variable_update) == 3
