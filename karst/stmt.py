@@ -7,37 +7,45 @@ class If(Statement):
         # an if must have predicate, expression, and else expression
         # else expression can be empty
         self.predicate: Expression = None
-        self.expression: Expression = None
-        self.else_expression: Expression = None
+        self.expressions: List[Expression] = []
+        self.else_expressions: List[Expression] = []
         # save the context
         self.context = parent.context[:]
         parent.context.clear()
 
-    def __call__(self, predicate: Expression, expression: Expression):
+    def __call__(self, predicate: Expression, *args: Expression):
         self.predicate = predicate
-        self.expression = expression
+        self.expressions = list(args)
 
-    def else_(self, expression: Expression):
-        self.else_expression = expression
+    def else_(self, *args: Expression):
+        self.else_expressions = list(args)
         # restore the context since we branched off
         self.parent.context = self.context
 
     def eval(self):
         if self.predicate.eval():
-            self.expression.eval()
+            for exp in self.expressions:
+                exp.eval()
         else:
-            assert self.else_expression is not None
-            self.else_expression.eval()
+            for exp in self.else_expressions:
+                exp.eval()
 
     def eq(self, other: "Statement"):
         if not isinstance(other, If):
             return False
-        if (self.else_expression is None) ^ (other.else_expression is None):
+        if not self.predicate.eq(other.predicate):
             return False
-        return self.predicate.eq(other.predicate) and \
-            self.expression.eq(other.expression) and \
-            (True if self.else_expression is None
-             else self.else_expression.eq(other.else_expression))
+        else:
+            if len(self.expressions) != len(other.expressions) or \
+                    len(self.else_expressions) != len(other.else_expressions):
+                return False
+            for idx, exp in enumerate(self.expressions):
+                if not exp.eq(other.expressions[idx]):
+                    return False
+            for idx, exp in enumerate(self.else_expressions):
+                if not exp.eq(other.else_expressions[idx]):
+                    return False
+        return True
 
     Else = else_
 

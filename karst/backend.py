@@ -154,8 +154,12 @@ def get_linear_spacing(*args: Union[Expression, Variable]):
 def visit_mem_access(tree: Union[Variable, Expression, Statement]):
     if isinstance(tree, If):
         # it has two expressions
-        r_1 = visit_mem_access(tree.expression)
-        r_2 = visit_mem_access(tree.else_expression)
+        r_1 = []
+        for exp in tree.expressions:
+            r_1 += visit_mem_access(exp)
+        r_2 = []
+        for exp in tree.else_expressions:
+            r_2 += visit_mem_access(exp)
         return r_1 + r_2
     elif isinstance(tree, ReturnStatement):
         # it can only be read access
@@ -246,8 +250,13 @@ def get_state_updates(expressions):
         elif isinstance(node_, AssignStatement):
             return [node_]
         elif isinstance(node_, If):
-            return __visit_assignments(node_.expression) + \
-                   __visit_assignments(node_.else_expression)
+            r_1 = []
+            for exp_ in node_.expressions:
+                r_1 += __visit_assignments(exp_)
+            r_2 = []
+            for exp_ in node_.else_expressions:
+                r_2 += __visit_assignments(exp_)
+            return r_1 + r_2
         else:
             return []
     stmts = []
