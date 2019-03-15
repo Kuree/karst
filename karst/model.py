@@ -102,7 +102,7 @@ class MemoryModel:
     def action(self, name: str, default_rdy_value: int = 0):
         # create ready-valid signals based on the function name
         self.Variable(f"EN_{name}", 1)
-        self.Variable(f"RDY_{name}", default_rdy_value)
+        self.Variable(f"RDY_{name}", 1, default_rdy_value)
         return self._Action(name, self)
 
     def __getitem__(self, item):
@@ -197,7 +197,20 @@ class MemoryModel:
         def wrapper():
             if action_name not in self._stmts:
                 self.produce_statements()
+            # use READY signal here
+            # only execute the statement if it's valid
+            read_signal = self[f"RDY_{action_name}"]
             stmts = self._stmts[action_name]
+            if read_signal.eval() != 1:
+                # latch out the return values
+                for stmt in stmts:
+                    if isinstance(stmt, ReturnStatement):
+                        v = stmt.eval()
+                        if len(v) == 1:
+                            return v[0]
+                        else:
+                            return v
+                return
             for stmt in stmts:
                 v = stmt.eval()
                 if isinstance(stmt, ReturnStatement):

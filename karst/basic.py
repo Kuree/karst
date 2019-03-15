@@ -11,12 +11,12 @@ def define_sram(size: int):
     sram_model.PortIn("wen", 1)
     sram_model.PortIn("data_in", 16)
 
-    @sram_model.action("read")
+    @sram_model.action("read", 1)
     def read():
         sram_model.data_out = sram_model[sram_model.addr]
         return sram_model.data_out
 
-    @sram_model.action("write")
+    @sram_model.action("write", 1)
     def write():
         sram_model[addr] = sram_model.data_in
 
@@ -56,7 +56,14 @@ def define_fifo(size: int):
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
-        fifo_model.RDY_dequeue = 1
+
+        fifo_model.If(fifo_model.word_count < mem_size,
+                      fifo_model.RDY_enqueue(1)).Else(
+                      fifo_model.RDY_enqueue(0))
+
+        fifo_model.If(fifo_model.word_count > 0,
+                      fifo_model.RDY_dequeue(1)).Else(
+                      fifo_model.RDY_dequeue(0))
 
     @fifo_model.action("dequeue")
     def dequeue():
@@ -70,14 +77,18 @@ def define_fifo(size: int):
                       ).Else(
                       fifo_model.almost_empty(0))
 
-        fifo_model.If(fifo_model.word_count > fifo_model.mem_size - 3,
+        fifo_model.If(fifo_model.word_count > mem_size - 3,
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
 
-        fifo_model.If(fifo_model.word_count < fifo_model.mem_size,
+        fifo_model.If(fifo_model.word_count < mem_size,
                       fifo_model.RDY_enqueue(1)).Else(
                       fifo_model.RDY_enqueue(0))
+
+        fifo_model.If(fifo_model.word_count > 0,
+                      fifo_model.RDY_dequeue(1)).Else(
+                      fifo_model.RDY_dequeue(0))
 
         return fifo_model.data_out
 
@@ -88,18 +99,18 @@ def define_fifo(size: int):
         fifo_model.word_count = 0
         fifo_model.almost_empty = 1
         fifo_model.almost_full = 0
+        fifo_model.RDY_enqueue = 1
 
     return fifo_model
 
 
-def define_line_buffer(depth, rows: int):
+def define_line_buffer(depth: int, rows: int):
     lb_model = MemoryModel(depth * rows)
     data_outs = []
     for i in range(rows):
         data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
     lb_model.PortIn("wen", 1)
     lb_model.PortIn("data_in", 16)
-    lb_model.PortOut("valid", 1)
     # state control variables
     lb_model.Variable("read_addr", 16, 0)
     lb_model.Variable("write_addr", 16, 0)
@@ -109,16 +120,20 @@ def define_line_buffer(depth, rows: int):
     lb_model.Constant("num_row", rows)
     buffer_size = depth * rows
 
-    @lb_model.action("enqueue")
+    @lb_model.action("enqueue", 1)
     def enqueue():
         lb_model[lb_model.write_addr] = lb_model.data_in
         # state update
         lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count + 1
 
-        lb_model.If(lb_model.word_count >= buffer_size,
-                    lb_model.valid(1)).Else(
-                    lb_model.valid(0))
+        lb_model.If(lb_model.word_count < buffer_size,
+                    lb_model.RDY_enqueue(1)).Else(
+                    lb_model.RDY_enqueue(0))
+
+        lb_model.If(lb_model.word_count > 0,
+                    lb_model.RDY_dequeue(1)).Else(
+                    lb_model.RDY_dequeue(0))
 
     @lb_model.action("dequeue")
     def dequeue():
@@ -132,9 +147,13 @@ def define_line_buffer(depth, rows: int):
         lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count - 1
 
-        lb_model.If(lb_model.word_count >= buffer_size,
-                    lb_model.valid(1)).Else(
-                    lb_model.valid(0))
+        lb_model.If(lb_model.word_count < buffer_size,
+                    lb_model.RDY_enqueue(1)).Else(
+                    lb_model.RDY_enqueue(0))
+
+        lb_model.If(lb_model.word_count > 0,
+                    lb_model.RDY_dequeue(1)).Else(
+                    lb_model.RDY_dequeue(0))
 
         return data_outs
 
@@ -143,5 +162,7 @@ def define_line_buffer(depth, rows: int):
         lb_model.read_addr = 0
         lb_model.write_addr = 0
         lb_model.word_count = 0
+
+        lb_model.RDY_enqueue = 1
 
     return lb_model

@@ -42,27 +42,6 @@ def construct_sym_expr_tree(expression: Union[Expression, Variable],
     return expression.op(left, right)
 
 
-def extract_action_conditions(model: MemoryModel):
-    conditions = model.get_conditions()
-    if len(conditions) == 0:
-        return
-    sym_condition = {}
-    symbol_table = {}
-    for name, condition in conditions.items():
-        # create symbols for each of them
-        conditions = []
-        for cond in condition:
-            sym_expr = construct_sym_expr_tree(cond, symbol_table)
-            conditions.append(sym_expr)
-
-        # and all the expect
-        cond = conditions[0]
-        for next_cond in conditions[1:]:
-            cond = z3.And(cond, next_cond)
-        sym_condition[name] = cond
-    return sym_condition, symbol_table
-
-
 def is_exclusive_condition(*args):
     symbol_table = {}
     s = z3.Solver()

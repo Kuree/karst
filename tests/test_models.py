@@ -44,6 +44,6 @@ def test_line_buffer():
     lb.enqueue()
     lb.data_in = 45
     lb.enqueue()
-    assert lb.valid == 1
+    assert lb.RDY_dequeue == 1
     outs = lb.dequeue()
     assert outs[0] == 42 and outs[1] == 44

@@ -4,11 +4,6 @@ import pytest
 from karst.basic import define_sram, define_fifo, define_line_buffer
 
 
-def test_condition_extraction():
-    fifo = define_fifo(10)
-    extract_action_conditions(fifo)
-
-
 def test_exclusive_expression():
     parent = MemoryModel(10)
     a = parent.Variable("a", 16)
