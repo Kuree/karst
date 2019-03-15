@@ -31,6 +31,9 @@ def test_fifo():
     assert fifo.dequeue() == 43
     assert fifo.dequeue() == 44
     assert fifo.dequeue() == 45
+    assert fifo.RDY_dequeue == 0
+    # latch out the data
+    assert fifo.dequeue() == 45
 
 
 def test_line_buffer():
@@ -40,6 +43,12 @@ def test_line_buffer():
     lb.enqueue()
     lb.data_in = 43
     lb.enqueue()
+    # not ready
+    assert lb.RDY_dequeue == 0
+    # this dequeue should matter
+    outs = lb.dequeue()
+    # it should latch the zero result
+    assert outs[0] == 0 and outs[1] == 0
     lb.data_in = 44
     lb.enqueue()
     lb.data_in = 45

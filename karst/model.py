@@ -199,9 +199,9 @@ class MemoryModel:
                 self.produce_statements()
             # use READY signal here
             # only execute the statement if it's valid
-            read_signal = self[f"RDY_{action_name}"]
+            ready_signal = self[f"RDY_{action_name}"]
             stmts = self._stmts[action_name]
-            if read_signal.eval() != 1:
+            if ready_signal.eval() != 1:
                 # latch out the return values
                 for stmt in stmts:
                     if isinstance(stmt, ReturnStatement):

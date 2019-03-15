@@ -127,11 +127,11 @@ def define_line_buffer(depth: int, rows: int):
         lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count + 1
 
-        lb_model.If(lb_model.word_count < buffer_size,
+        lb_model.If(lb_model.word_count <= buffer_size,
                     lb_model.RDY_enqueue(1)).Else(
                     lb_model.RDY_enqueue(0))
 
-        lb_model.If(lb_model.word_count > 0,
+        lb_model.If(lb_model.word_count >= buffer_size,
                     lb_model.RDY_dequeue(1)).Else(
                     lb_model.RDY_dequeue(0))
 
@@ -147,11 +147,11 @@ def define_line_buffer(depth: int, rows: int):
         lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
         lb_model.word_count = lb_model.word_count - 1
 
-        lb_model.If(lb_model.word_count < buffer_size,
+        lb_model.If(lb_model.word_count <= buffer_size,
                     lb_model.RDY_enqueue(1)).Else(
                     lb_model.RDY_enqueue(0))
 
-        lb_model.If(lb_model.word_count > 0,
+        lb_model.If(lb_model.word_count >= buffer_size,
                     lb_model.RDY_dequeue(1)).Else(
                     lb_model.RDY_dequeue(0))
 
