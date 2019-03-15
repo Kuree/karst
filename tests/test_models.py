@@ -15,6 +15,7 @@ def test_sram():
 
 def test_fifo():
     fifo = define_fifo(100)
+    fifo.clear()
     fifo.data_in = 42
     fifo.enqueue()
     out = fifo.dequeue()
@@ -34,7 +35,7 @@ def test_fifo():
 
 def test_line_buffer():
     lb = define_line_buffer(2, 2)
-    lb.reset()
+    lb.clear()
     lb.data_in = 42
     lb.enqueue()
     lb.data_in = 43

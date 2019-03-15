@@ -41,7 +41,7 @@ def define_fifo(size: int):
 
     mem_size = size
 
-    @fifo_model.action("enqueue")
+    @fifo_model.action("enqueue", 1)
     def enqueue():
         fifo_model[fifo_model.write_addr] = fifo_model.data_in
         # state update
@@ -57,6 +57,7 @@ def define_fifo(size: int):
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
+        fifo_model.RDY_dequeue = 1
 
     @fifo_model.action("dequeue")
     def dequeue():
@@ -74,6 +75,10 @@ def define_fifo(size: int):
                       fifo_model.almost_full(1)
                       ).Else(
                       fifo_model.almost_full(0))
+
+        fifo_model.If(fifo_model.word_count < fifo_model.mem_size,
+                      fifo_model.RDY_enqueue(1)).Else(
+                      fifo_model.RDY_enqueue(0))
 
         return fifo_model.data_out
 
