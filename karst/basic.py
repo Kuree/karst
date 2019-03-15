@@ -14,7 +14,6 @@ def define_sram(size: int):
     @sram_model.action("read")
     def read():
         sram_model.data_out = sram_model[sram_model.addr]
-
         return sram_model.data_out
 
     @sram_model.action("write")
