@@ -7,7 +7,6 @@ setup(
         "karst"
     ],
     install_requires=[
-        "hwtypes",
         "astor",
         "z3-solver",
     ],

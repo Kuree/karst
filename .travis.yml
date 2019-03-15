@@ -4,7 +4,7 @@ python:
 
 install:
     - pip install --upgrade pytest
-    - pip install pytest-cov pytest-codestyle
+    - pip install pytest-cov pytest-codestyle codecov
     - pip install -e .
 
 script:
