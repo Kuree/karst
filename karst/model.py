@@ -1,5 +1,6 @@
 import inspect
 from karst.stmt import *
+from typing import Callable
 
 
 class Memory:
@@ -58,15 +59,19 @@ class MemoryModel:
         self._actions = {}
         self._conditions = {}
         self._mem = Memory(size, self)
+        self.mem_size = size
 
         self.ast_text = {}
-        self.mem_size = size
 
         self._stmts = {}
 
         self.context = []
 
         self._initialized = True
+
+    def set_mem_size(self, size: int):
+        self._mem = Memory(size, self)
+        self.mem_size = size
 
     def define_variable(self, name: str, bit_width: int,
                         value: int = 0) -> Variable:
@@ -217,3 +222,16 @@ class MemoryModel:
     Constant = define_const
     If = define_if
     Return = define_return
+
+    # decorator to wrap around the define function. this is need to allow
+    # ast rewrite that respects to the scope
+    @staticmethod
+    def define(func: Callable[["MemoryModel"], None]):
+        model = MemoryModel(0)
+        func(model)
+
+        class _Wrapper:
+            def __call__(self):
+                return model
+        return _Wrapper()
+

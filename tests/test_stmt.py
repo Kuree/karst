@@ -1,4 +1,3 @@
-from karst.stmt import *
 from karst.model import *
 
 
