@@ -1,5 +1,4 @@
 import ast
-import textwrap
 
 
 class AssignNodeVisitor(ast.NodeTransformer):
@@ -23,7 +22,8 @@ class IfNodeVisitor(ast.NodeTransformer):
 
         if_node = ast.Call(func=ast.Attribute(ast.Name(id=self.model_name,
                                                        ctx=ast.Load()),
-                                              attr="If"),
+                                              attr="If",
+                                              cts=ast.Load()),
                            args=[predicate] + expression,
                            keywords=[],
                            ctx=ast.Load)
