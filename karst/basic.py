@@ -55,8 +55,8 @@ def define_fifo(*args, **kwargs):
             fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
             fifo_model.word_count = fifo_model.word_count + 1
 
-            # notice that we can make function calls here as long as it's not
-            # annotated in action()
+            # notice that we can make function calls here as long as it's
+            # marked with model.mark
             # the function calls will be executed as normal python code, same
             # as if statement
             update_state()
