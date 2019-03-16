@@ -3,6 +3,7 @@ from karst.stmt import *
 from typing import Callable
 from karst.ast_codegen import *
 import astor
+import textwrap
 
 
 class Memory:

@@ -1,5 +1,4 @@
 from karst.basic import define_sram, define_fifo, define_line_buffer
-from karst.model import MemoryModel, define_memory
 
 
 def test_sram():

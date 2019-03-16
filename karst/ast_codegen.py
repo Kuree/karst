@@ -20,8 +20,8 @@ class IfNodeVisitor(ast.NodeTransformer):
         expression = node.body
         else_expression = node.orelse
 
-        if_node = ast.Call(func=ast.Attribute(ast.Name(id=self.model_name,
-                                                       ctx=ast.Load()),
+        if_node = ast.Call(func=ast.Attribute(value=ast.Name(id=self.model_name,
+                                                             ctx=ast.Load()),
                                               attr="If",
                                               cts=ast.Load()),
                            args=[predicate] + expression,
