@@ -40,9 +40,9 @@ def test_if_else_transform():
                 self.value = int(args[0])
 
     foo = Foo()
-    
+
     def __test_func():
-        if 1 == 1:
+        if 1 == (1 + 1 - 1):
             1
             2
         else:
@@ -55,7 +55,7 @@ def test_if_else_transform():
     if_ = IfNodeVisitor("foo")
     if_.visit(tree)
     src = astor.to_source(tree)
-    src += "__test_func()\n"
+    src += f"{__test_func.__name__}()\n"
     code = compile(src, "<ast>", "exec")
     exec(code, {"foo": foo})
     assert foo.value == 1 + 2

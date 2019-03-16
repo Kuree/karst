@@ -1,5 +1,5 @@
 from karst.basic import define_sram, define_fifo, define_line_buffer
-from karst.model import MemoryModel
+from karst.model import MemoryModel, define_memory
 
 
 def test_sram():
@@ -62,12 +62,3 @@ def test_line_buffer():
     lb.data_in = 45
     outs = lb.enqueue()
     assert outs[0] == 42 and outs[1] == 44
-
-
-def test_code_gen():
-
-    @MemoryModel.define
-    def __define_fifo(model: MemoryModel):
-        model.set_mem_size(100)
-
-    a = __define_fifo()

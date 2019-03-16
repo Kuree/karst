@@ -1,6 +1,8 @@
 import inspect
 from karst.stmt import *
 from typing import Callable
+from karst.ast_codegen import *
+import astor
 
 
 class Memory:
@@ -60,8 +62,6 @@ class MemoryModel:
         self._conditions = {}
         self._mem = Memory(size, self)
         self.mem_size = size
-
-        self.ast_text = {}
 
         self._stmts = {}
 
@@ -173,9 +173,6 @@ class MemoryModel:
                 self.model._stmts[self.name] = self.model.context[:]
                 return v
             self.model._actions[self.name] = wrapper
-            # perform AST analysis to in order to lower it to RTL
-            txt = inspect.getsource(f)
-            self.model.ast_text[self.name] = txt
             return wrapper
 
     def get_action_names(self):
@@ -215,6 +212,12 @@ class MemoryModel:
                         return v
         return wrapper
 
+    @classmethod
+    def mark(cls, func):
+        def wrapper(*args, **kwargs):
+            func(*args, **kwargs)
+        return wrapper
+
     # alias
     Variable = define_variable
     PortIn = define_port_in
@@ -223,15 +226,37 @@ class MemoryModel:
     If = define_if
     Return = define_return
 
-    # decorator to wrap around the define function. this is need to allow
-    # ast rewrite that respects to the scope
-    @staticmethod
-    def define(func: Callable[["MemoryModel"], None]):
-        model = MemoryModel(0)
-        func(model)
 
-        class _Wrapper:
-            def __call__(self):
-                return model
-        return _Wrapper()
+# decorator to wrap around the define function. this is need to allow
+# ast rewrite that respects to the scope
+def define_memory(func: Callable[["MemoryModel"], None]):
+    func_src = inspect.getsource(func)
+    func_tree = ast.parse(textwrap.dedent(func_src))
+    # remove the decorator
+    func_tree.body[0].decorator_list = []
+    # find the model name
+    find_model_name = FindModelVariableName()
+    find_model_name.visit(func_tree)
+    assert find_model_name.name, "unable to find model variable name"
+    model_name = find_model_name.name
+    action_visitor = FindActionDefine()
+    action_visitor.visit(func_tree)
+    assert len(action_visitor.nodes) > 0
+    for action_node in action_visitor.nodes:
+        # two passes
+        # the first one convert all the assignment into function
+        assign_visitor = AssignNodeVisitor()
+        action_node = assign_visitor.visit(action_node)
+        ast.fix_missing_locations(action_node)
+        s2 = astor.to_source(action_node)
+        # second pass to convert if statement
+        if_visitor = IfNodeVisitor(model_name)
+        action_node = if_visitor.visit(action_node)
+        ast.fix_missing_locations(action_node)
 
+    new_src = astor.to_source(func_tree, indent_with=" " * 2)
+    func_name = func.__name__
+    code_obj = compile(new_src, "<ast>", "exec")
+    exec(code_obj, globals(), locals())
+    namespace = locals()
+    return namespace[func_name]

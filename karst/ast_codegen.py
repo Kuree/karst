@@ -32,3 +32,28 @@ class IfNodeVisitor(ast.NodeTransformer):
                              args=else_expression, keywords=[])
 
         return ast.Expr(value=else_node)
+
+
+class FindActionDefine(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.nodes = []
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if node.decorator_list:
+            # TODO:
+            # change it to a more robust way to detect action definition
+            self.nodes.append(node)
+        self.generic_visit(node)
+
+
+class FindModelVariableName(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.name = ""
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if not self.name and node.decorator_list:
+            n = node.decorator_list[0]
+            self.name = n.func.value.id
+        self.generic_visit(node)

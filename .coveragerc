@@ -1,0 +1,2 @@
+[run]
+omit = karst/basic.py
