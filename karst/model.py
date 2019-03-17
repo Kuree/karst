@@ -243,7 +243,11 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     action_visitor = FindActionDefine()
     action_visitor.visit(func_tree)
     assert len(action_visitor.nodes) > 0
-    for action_node in action_visitor.nodes:
+    # get all the marked as well
+    mark_visitor = FindMarkedFunction()
+    mark_visitor.visit(func_tree)
+    nodes = action_visitor.nodes + mark_visitor.nodes
+    for action_node in nodes:
         # two passes
         # the first one convert all the assignment into function
         assign_visitor = AssignNodeVisitor()

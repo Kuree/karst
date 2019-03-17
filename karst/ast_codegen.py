@@ -41,9 +41,25 @@ class FindActionDefine(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         if node.decorator_list:
-            # TODO:
-            # change it to a more robust way to detect action definition
-            self.nodes.append(node)
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Call):
+                    if isinstance(decorator.func, ast.Attribute) and \
+                            decorator.func.attr == "action":
+                        self.nodes.append(node)
+        self.generic_visit(node)
+
+
+class FindMarkedFunction(ast.NodeVisitor):
+    def __init__(self):
+        super().__init__()
+        self.nodes = []
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if node.decorator_list:
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Attribute):
+                    if decorator.attr == "mark":
+                        self.nodes.append(node)
         self.generic_visit(node)
 
 
