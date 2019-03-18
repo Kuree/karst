@@ -123,6 +123,24 @@ def test_line_buffer_memory_access(num_row, line_size):
         assert space == line_size
 
 
+def test_sram_update_states():
+    sram = define_sram(20)
+    statements = sram.produce_statements()
+    stmts = statements["read"]
+    updates = get_state_updates(stmts)
+    variable_update = get_updated_variables(updates)
+    assert len(variable_update) == 0
+
+    # compute the access pattern temporally
+    access = get_memory_access(sram)
+    read_access = access["read"]
+    read_access_vars = get_var_memory_access(read_access)
+    result = get_mem_access_temporal_spacing(variable_update,
+                                             list(read_access_vars.keys()))
+    assert len(result) == 1
+    assert result[sram.addr] is None
+
+
 def test_fifo_update_states():
     fifo = define_fifo(20)
     statements = fifo.produce_statements()
@@ -134,6 +152,14 @@ def test_fifo_update_states():
     updates = get_state_updates(stmts)
     variable_update = get_updated_variables(updates)
     assert len(variable_update) == 2
+
+    access = get_memory_access(fifo)
+    dequeue_access = access["dequeue"]
+    dequeue_access_vars = get_var_memory_access(dequeue_access)
+    result = get_mem_access_temporal_spacing(variable_update,
+                                             list(dequeue_access_vars.keys()))
+    assert len(result) == 1
+    assert result[fifo.read_addr] == 1
 
 
 def test_lb_update_states():

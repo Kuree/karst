@@ -193,7 +193,7 @@ class Variable(Value):
         return self.name
 
     def copy(self):
-        return self
+        return Variable(self.name, self.bit_width, self.parent, self.value)
 
     def eq(self, other: Value):
         if not isinstance(other, Variable):

@@ -113,3 +113,22 @@ def test_const():
     v1(1)
     v2 = model.Constant("b", v1)
     assert v2.eval() == 1
+
+
+def test_copy():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4, 4)
+    v2 = v1.copy()
+    v3 = model.Variable("b", 4, 4)
+    assert id(v1) != id(v2)
+    assert v1.eq(v2)
+    v1(1)
+    # because a variable is identified by the name, even the value changes
+    # it's still the same variable
+    assert v1.eq(v2) and v1.value != v2.value
+    exp1 = v1 - v3
+    exp2 = exp1.copy()
+    assert exp1.eq(exp2)
+    exp1.right.value = 2
+    assert exp1.eq(exp2)
+    assert exp2.right.eval() == 4 and exp1.right.eval() == 2

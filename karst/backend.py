@@ -184,7 +184,8 @@ def get_memory_access(model: MemoryModel)-> \
 
 def get_var_memory_access(access_pattern:
                           List[Tuple[Memory.MemoryAccess,
-                                     Memory.MemoryAccessType]]):
+                                     Memory.MemoryAccessType]]) \
+        -> Dict[Variable, List[Tuple[Expression, Memory.MemoryAccessType]]]:
     access_expressions = []
     for access, t in access_pattern:
         exp = access.var
@@ -270,4 +271,40 @@ def get_updated_variables(stmts: List[AssignStatement]):
         z3_exp = z3.simplify(z3_exp)
         if not isinstance(z3_exp, z3.IntNumRef) or not z3_exp.is_int():
             result.append(stmt)
+    return result
+
+
+def get_mem_access_temporal_spacing(updated_statements: List[AssignStatement],
+                                    mem_access_variable: List[Variable]):
+    assigned_variable = {}
+    for stmt in updated_statements:
+        var = stmt.left
+        assigned_variable[var] = stmt.right
+
+    def __update(exp_: Value):
+        if isinstance(exp_, Const):
+            return exp_
+        elif isinstance(exp_, Variable):
+            # loop up the new one
+            if exp_ in assigned_variable:
+                return assigned_variable[exp_].copy()
+            else:
+                return exp_
+        elif isinstance(exp_, Expression):
+            return Expression(__update(exp_.left.copy()),
+                              __update(exp_.right.copy()), exp_.op)
+    result = {}
+    for var in mem_access_variable:
+        if var not in assigned_variable:
+            # assumes random access
+            result[var] = None
+            continue
+        # perform one update recursively and compute the difference
+        current_update = assigned_variable[var]
+        next_update = current_update.copy()
+        next_update = __update(next_update)
+        # compute the spacing
+        success, diff_int = get_linear_spacing(current_update, next_update)
+        assert success, "Cannot determine relations after one cycle"
+        result[var] = diff_int
     return result
