@@ -47,7 +47,7 @@ class Scheduler:
                     variables.append(ac_var)
                 # compute the spacing
                 spaced, spacing = get_linear_spacing(*variables)
-                if spaced:
+                if spaced and spacing > 0:
                     self.access_spacing[var] = spacing
                 else:
                     # no pattern, we assume it's random access

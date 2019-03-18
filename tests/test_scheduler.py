@@ -17,6 +17,7 @@ def test_basic_scheduler_sram():
     scheduler = BasicScheduler(sram)
     assert len(scheduler.update_spacing) == 1
     assert scheduler.update_spacing[sram.addr] is None
+    assert scheduler.access_spacing[sram.addr] is None
 
 
 def test_basic_scheduler_lb():
