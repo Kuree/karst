@@ -16,21 +16,13 @@ def test_exclusive_expression():
     assert is_exclusive_condition(a > 6, b < 3, a < b)
 
 
-def test_expression_preprocess():
-    var1 = Variable("a", 1, None)
-    var2 = Variable("b", 1, None)
-    exp0 = var1
-    exp1 = var1 % 5
-    exp2 = var2 % 5
-    exp3 = var1 % 10
-    r = preprocess_expressions(exp1)
-    assert r[0].eq(var1)
-    r = preprocess_expressions(exp1, exp3)
-    assert r[0].eq(exp1) and r[1].eq(exp3)
-    r = preprocess_expressions(exp1, exp2)
-    assert r[0].eq(var1) and r[1].eq(var2)
-    r = preprocess_expressions(exp0, exp1, exp2)
-    assert r[0].eq(var1) and r[1].eq(var1) and r[2].eq(var2)
+def test_remove_mod():
+    parent = MemoryModel(10)
+    a = parent.Variable("a", 16)
+    b = parent.Variable("b", 16)
+    exp = (a % b) % b
+    new_exp = remove_mod_op(exp)
+    assert new_exp.eq(a)
 
 
 def test_linear_spacing():

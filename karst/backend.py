@@ -57,34 +57,15 @@ def __abs(x):
     return z3.If(x >= 0, x, -x)
 
 
-def preprocess_expressions(*args: Union[Expression, Variable]):
-    """remove the mod expression at the end to help z3 to simplify
-    expressions"""
-    has_mod = True
-    expressions = list(args)
-    for exp in expressions:
-        if isinstance(exp, Expression):
-            if exp.op != operator.mod:
-                has_mod = False
-                break
-    if not has_mod:
-        return expressions
-    mod_value = None
-    for exp in expressions:
-        if isinstance(exp, Expression):
-            if mod_value is None:
-                mod_value = exp.right
-            else:
-                if not mod_value.eq(exp.right):
-                    return expressions
-    # remove the mod at the end
-    new_exps = []
-    for exp in expressions:
-        if isinstance(exp, Expression):
-            new_exps.append(exp.left)
-        else:
-            new_exps.append(exp)
-    return new_exps
+def remove_mod_op(exp: Union[Expression, Value]):
+    """remove the mod op when calculating spacing"""
+    if not isinstance(exp, Expression):
+        return exp
+    elif exp.op == operator.mod:
+        return remove_mod_op(exp.left)
+    else:
+        return Expression(remove_mod_op(exp.left),
+                          remove_mod_op(exp.right), exp.op)
 
 
 def get_linear_spacing(*args: Union[Expression, Variable]):
@@ -95,9 +76,10 @@ def get_linear_spacing(*args: Union[Expression, Variable]):
     symbol_table = {}
     expressions = []
     # preprocess the expressions and variables
-    processed = preprocess_expressions(*args)
-    for exp in processed:
-        smt_expr = construct_sym_expr_tree(exp, symbol_table)
+    # processed = preprocess_expressions(*args)
+    for exp in args:
+        exp_ = remove_mod_op(exp)
+        smt_expr = construct_sym_expr_tree(exp_, symbol_table)
         expressions.append(smt_expr)
     assert len(symbol_table) == 1, "Only one variable allowed"
     sym = symbol_table.popitem()
