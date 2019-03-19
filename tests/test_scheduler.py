@@ -1,30 +1,36 @@
 from karst.scheduler import *
 from karst.basic import *
+import pytest
 
 
-def test_basic_scheduler_fifo():
+@pytest.mark.parametrize("num_ports", (1, 2))
+def test_basic_scheduler_fifo(num_ports):
     fifo = define_fifo(42)
-    scheduler = BasicScheduler(fifo)
+    scheduler = BasicScheduler(fifo, num_ports)
     # this should be already tested in the backend, some asserts here
     # just to be sure it's doing the correct thing
     assert len(scheduler.update_spacing) == 2
     assert scheduler.update_spacing[fifo.read_addr] == 1
     assert scheduler.update_spacing[fifo.write_addr] == 1
+    assert scheduler.get_minimum_cycle() == 2 / num_ports
 
 
-def test_basic_scheduler_sram():
+@pytest.mark.parametrize("num_ports", (1, 2))
+def test_basic_scheduler_sram(num_ports):
     sram = define_sram(42)
-    scheduler = BasicScheduler(sram)
+    scheduler = BasicScheduler(sram, num_ports)
     assert len(scheduler.update_spacing) == 1
     assert scheduler.update_spacing[sram.addr] is None
     assert scheduler.access_spacing[sram.addr] is None
+    assert scheduler.get_minimum_cycle() == 2 / num_ports
 
 
-def test_basic_scheduler_lb():
+@pytest.mark.parametrize("num_ports", (1, 2))
+def test_basic_scheduler_lb(num_ports):
     num_row = 4
     line_depth = 42
     lb = define_line_buffer(line_depth, num_row)
-    scheduler = BasicScheduler(lb)
+    scheduler = BasicScheduler(lb, num_ports)
     assert len(scheduler.update_spacing) == 2
     assert scheduler.update_spacing[lb.read_addr] == 1
     assert scheduler.update_spacing[lb.write_addr] == 1
@@ -34,3 +40,5 @@ def test_basic_scheduler_lb():
         assert var in scheduler.update_spacing
         assert scheduler.update_spacing[var] == 1
         assert scheduler.access_spacing[var] == line_depth
+    assert scheduler.get_minimum_cycle() == num_row if num_ports == 2 else \
+        num_row + 1

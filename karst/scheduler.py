@@ -1,9 +1,10 @@
-from typing import Dict, Set
+from typing import Dict
 from karst.model import MemoryModel, Memory
 from karst.backend import get_updated_variables, get_state_updates, \
     get_memory_access, get_var_memory_access, get_mem_access_temporal_spacing,\
     get_linear_spacing
 from karst.values import Expression, Variable
+import abc
 
 
 class Scheduler:
@@ -53,7 +54,50 @@ class Scheduler:
                     # no pattern, we assume it's random access
                     self.access_spacing[var] = None
 
+    @abc.abstractmethod
+    def schedule(self):
+        """schedule for the memory resource"""
+
 
 class BasicScheduler(Scheduler):
     def __init__(self, model: MemoryModel, num_ports: int = 1):
         super().__init__(model, num_ports)
+
+    def get_minimum_cycle(self):
+        """Get the minimum number of cycles needed to perform all the actions
+        """
+        num_read = {}
+        num_write = {}
+        for ac_var, root_var in self.read_var.items():
+            assert root_var in self.access_spacing
+            if root_var is None:
+                # random access
+                num_read[root_var] = 1
+            else:
+                if root_var not in num_read:
+                    num_read[root_var] = 0
+                num_read[root_var] += 1
+        for ac_var, root_var in self.write_var.items():
+            assert root_var in self.access_spacing
+            if root_var is None:
+                # random access
+                num_read[root_var] = 1
+            else:
+                if root_var not in num_write:
+                    num_write[root_var] = 0
+                num_write[root_var] += 1
+        # compute the cycle based on if the root variable access is random
+        # access or not
+        r_result = 0
+        w_result = 0
+        for _, v in num_read.items():
+            r_result += v
+        for _, v in num_write.items():
+            w_result += v
+        if self._num_ports == 1:
+            return r_result + w_result
+        else:
+            return max(r_result, w_result)
+
+    def schedule(self):
+        """TODO"""
