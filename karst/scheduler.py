@@ -70,7 +70,7 @@ class BasicScheduler(Scheduler):
         num_write = {}
         for ac_var, root_var in self.read_var.items():
             assert root_var in self.access_spacing
-            if root_var is None:
+            if self.access_spacing[root_var] is None:
                 # random access
                 num_read[root_var] = 1
             else:
@@ -79,9 +79,9 @@ class BasicScheduler(Scheduler):
                 num_read[root_var] += 1
         for ac_var, root_var in self.write_var.items():
             assert root_var in self.access_spacing
-            if root_var is None:
+            if self.access_spacing[root_var] is None:
                 # random access
-                num_read[root_var] = 1
+                num_write[root_var] = 1
             else:
                 if root_var not in num_write:
                     num_write[root_var] = 0
