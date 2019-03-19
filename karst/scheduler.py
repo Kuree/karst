@@ -99,5 +99,17 @@ class BasicScheduler(Scheduler):
         else:
             return max(r_result, w_result)
 
+    def get_minimum_port_size(self):
+        """Get memory port size. The unit is the per access, e.g. 2 for a
+        32-bit port if the read and write uses 16-bit"""
+        # cycle = self.get_minimum_cycle()
+        # this is determined by the output bandwidth
+        # I had a conjecture that that the minimum port size is the same
+        # as the minimum cycles
+        # however, it is not true for single-port SRAM.
+        # basically if one cycle only has read or one cycle only has write, it
+        # can be used as single
+        # return cycle
+
     def schedule(self):
         """TODO"""

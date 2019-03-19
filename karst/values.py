@@ -142,6 +142,14 @@ class Value:
             value = other
         return Expression(self, value, operator.lshift)
 
+    def __xor__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
+        else:
+            value = other
+        return Expression(self, value, operator.xor)
+
 
 class AssignStatement(Statement):
     def __init__(self, left: "Variable", right: Value, parent):

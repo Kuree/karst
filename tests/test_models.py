@@ -31,20 +31,18 @@ def test_fifo():
     fifo.enqueue()
     fifo.data_in = 45
     fifo.enqueue()
-    assert fifo.almost_empty == 0
+    # assert fifo.almost_empty == 0
     assert fifo.dequeue() == 43
     assert fifo.dequeue() == 44
     assert fifo.dequeue() == 45
     # the queue is empty now
     # assert control signals
-    assert fifo.RDY_dequeue == 0
     # latch out the data
     assert fifo.dequeue() == 45
 
     # make it full
     for i in range(fifo_depth):
         fifo.enqueue()
-    assert fifo.RDY_enqueue == 0
     # nothing happens
     fifo.enqueue()
 

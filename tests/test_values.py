@@ -107,6 +107,13 @@ def test_add():
     assert (1 + v1).eval() == 1 + 1
 
 
+def test_xor():
+    model = MemoryModel(42)
+    v1 = model.Variable("a", 4, 4)
+    v2 = model.Variable("b", 4, 4)
+    assert (v1 ^ v2).eval() == (v1 ^ 4).eval()
+
+
 def test_const():
     model = MemoryModel(42)
     v1 = model.Variable("a", 4)

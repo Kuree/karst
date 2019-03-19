@@ -9,18 +9,20 @@ def define_sram(*args, **kwargs):
         # define ports here
         sram_model.PortIn("ren", 1)
         sram_model.PortOut("data_out", 16)
-        addr = sram_model.PortIn("addr", 16)
+        sram_model.PortIn("addr", 16)
         sram_model.PortIn("wen", 1)
         sram_model.PortIn("data_in", 16)
 
-        @sram_model.action("read", 1)
+        # declare the interface for read action. we create a port
+        # aliasing here to alias EN_read with ren
+        @sram_model.action(default_rdy_value=1, en_port_name="ren")
         def read():
             sram_model.data_out = sram_model[sram_model.addr]
             return sram_model.data_out
 
-        @sram_model.action("write", 1)
+        @sram_model.action(default_rdy_value=1, en_port_name="wen")
         def write():
-            sram_model[addr] = sram_model.data_in
+            sram_model[sram_model.addr] = sram_model.data_in
 
         return sram_model
 
@@ -29,13 +31,12 @@ def define_sram(*args, **kwargs):
 
 def define_fifo(*args, **kwargs):
     @define_memory
-    def fifo(size):
+    def fifo(size, delay_threshold: int = 0):
         fifo_model = MemoryModel(size)
         # define ports here
         fifo_model.PortOut("data_out", 16)
-        fifo_model.PortIn("wen", 1)
         fifo_model.PortIn("data_in", 16)
-        fifo_model.PortOut("almost_empty", 1, 1)
+        fifo_model.PortOut("almost_empty", 1)
         fifo_model.PortOut("almost_full", 1)
 
         # state control variables
@@ -43,12 +44,21 @@ def define_fifo(*args, **kwargs):
         fifo_model.Variable("write_addr", 16, 0)
         fifo_model.Variable("word_count", 16, 0)
 
+        # ready port name
+        fifo_model.Variable("not_almost_full", 1)
+        fifo_model.Variable("not_almost_empty", 1)
+        # TODO: fix this
+        fifo_model.almost_full = fifo_model.not_almost_full ^ 1
+        fifo_model.almost_empty = fifo_model.not_almost_empty ^ 1
+
         # some other constants
-        fifo_model.Constant("almost_t", 3)
+        fifo_model.Constant("almost_t", delay_threshold)
 
         mem_size = size
 
-        @fifo_model.action("enqueue", 1)
+        # use the default en_ENQUEUE here
+        @fifo_model.action(default_rdy_value=1,
+                           rdy_port_name="not_almost_full")
         def enqueue():
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
             # state update
@@ -61,7 +71,7 @@ def define_fifo(*args, **kwargs):
             # as if statement
             update_state()
 
-        @fifo_model.action("dequeue")
+        @fifo_model.action(rdy_port_name="not_almost_empty")
         def dequeue():
             fifo_model.data_out = fifo_model[fifo_model.read_addr]
             # state update
@@ -72,39 +82,27 @@ def define_fifo(*args, **kwargs):
 
             return fifo_model.data_out
 
-        @fifo_model.action("clear", 1)
+        @fifo_model.action(default_rdy_value=1)
         def clear():
             fifo_model.read_addr = 0
             fifo_model.write_addr = 0
             fifo_model.word_count = 0
-            fifo_model.almost_empty = 1
-            fifo_model.almost_full = 0
-
-            fifo_model.RDY_enqueue = 1
+            fifo_model.not_almost_empty = 0
+            fifo_model.not_almost_full = 1
 
         @fifo_model.mark
         def update_state():
             # There is an astor bug that prevent long if statements
             # being converted
-            if fifo_model.word_count < fifo_model.almost_t:
-                fifo_model.almost_empty = 1
+            if fifo_model.word_count > fifo_model.almost_t:
+                fifo_model.not_almost_empty = 1
             else:
-                fifo_model.almost_empty = 0
+                fifo_model.not_almost_empty = 0
 
-            if fifo_model.word_count > (mem_size - fifo_model.almost_t):
-                fifo_model.almost_full = 1
+            if fifo_model.word_count < (mem_size - fifo_model.almost_t):
+                fifo_model.not_almost_full = 1
             else:
-                fifo_model.almost_full = 0
-
-            if fifo_model.word_count < mem_size:
-                fifo_model.RDY_enqueue = 1
-            else:
-                fifo_model.RDY_enqueue = 0
-
-            if fifo_model.word_count > 0:
-                fifo_model.RDY_dequeue = 1
-            else:
-                fifo_model.RDY_dequeue = 0
+                fifo_model.not_almost_full = 0
 
         return fifo_model
     return fifo(*args, **kwargs)
@@ -127,7 +125,7 @@ def define_line_buffer(*args, **kwargs):
         lb_model.Constant("num_row", rows)
         buffer_size = depth * rows
 
-        @lb_model.action("enqueue", 1)
+        @lb_model.action(default_rdy_value=1)
         def enqueue():
             lb_model[lb_model.write_addr] = lb_model.data_in
             # state update
@@ -145,7 +143,7 @@ def define_line_buffer(*args, **kwargs):
 
             return data_outs
 
-        @lb_model.action("clear", 1)
+        @lb_model.action(default_rdy_value=1)
         def clear():
             lb_model.read_addr = 0
             lb_model.write_addr = 0

@@ -105,11 +105,10 @@ class MemoryModel:
         self._consts[name] = const
         return const
 
-    def action(self, name: str, default_rdy_value: int = 0):
-        # create ready-valid signals based on the function name
-        self.Variable(f"EN_{name}", 1)
-        self.Variable(f"RDY_{name}", 1, default_rdy_value)
-        return self._Action(name, self)
+    def action(self, default_rdy_value: int = 0, en_port_name: str = "",
+               rdy_port_name: str = ""):
+        return self._Action(self, default_rdy_value, en_port_name,
+                            rdy_port_name)
 
     def __getitem__(self, item):
         if isinstance(item, Value):
@@ -148,6 +147,9 @@ class MemoryModel:
                 self._variables[key]
             variable(value)
 
+    def __contains__(self, item):
+        return item in self._variables or item in self._ports
+
     def define_if(self, predicate: Union[Expression, bool], expr: Expression):
         if_ = If(self)
         return if_(predicate, expr)
@@ -157,11 +159,39 @@ class MemoryModel:
         return return_
 
     class _Action:
-        def __init__(self, name: str, model: "MemoryModel"):
-            self.name = name
+        def __init__(self, model: "MemoryModel", default_rdy_value: int,
+                     en_port_name: str, rdy_port_name: str):
+            self.name = ""
             self.model = model
+            self.default_rdy_value = default_rdy_value
+            self.en_port_name = en_port_name
+            self.rdy_port_name = rdy_port_name
 
         def __call__(self, f):
+            self.name = f.__name__
+            assert self.name != "" and self.name not in self.model._actions
+            en_port_name = self.en_port_name if self.en_port_name \
+                else f"EN_{self.name}"
+            rdy_port_name = self.rdy_port_name if self.rdy_port_name else \
+                f"RDY_{self.name}"
+            # create ready-valid signals based on the function name
+            # we need to be very careful about the port aliasing
+            if en_port_name in self.model:
+                # port aliasing
+                self.model._ports[f"EN_{self.name}"] = \
+                    self.model[en_port_name]
+                self.model[en_port_name].value = self.default_rdy_value
+            else:
+                self.model.Variable(f"EN_{self.name}", 1,
+                                    self.default_rdy_value)
+            if rdy_port_name in self.model:
+                # port aliasing
+                self.model._ports[f"RDY_{self.name}"] = \
+                    self.model[rdy_port_name]
+                self.model[rdy_port_name] = self.default_rdy_value
+            else:
+                self.model.Variable(f"RDY_{self.name}", 1,
+                                    self.default_rdy_value)
 
             def wrapper():
                 # we need to record every expressions here
