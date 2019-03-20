@@ -5,6 +5,7 @@ from karst.backend import get_updated_variables, get_state_updates, \
     get_linear_spacing
 from karst.values import Expression, Variable
 import abc
+import math
 
 
 class Scheduler:
@@ -105,13 +106,9 @@ class BasicScheduler(Scheduler):
         # notice that due to stride we need to extra careful how the throughput
         # is defined
         assert total_cycle >= throughput_cycle
-        assert total_cycle >= self.get_minimum_cycle()
+        assert throughput_cycle >= self.get_minimum_cycle()
         read_throughput = 0
-        visited = set()
         for ac_var, root_var in self.read_var.items():
-            visited.add(root_var)
-
-        for root_var in visited:
             var_throughput = 1
             if self.update_spacing[root_var] is not None:
                 spacing = self.update_spacing[root_var]
@@ -119,15 +116,21 @@ class BasicScheduler(Scheduler):
             read_throughput += var_throughput
 
         write_throughput = 0
-        visited.clear()
         for ac_var, root_var in self.write_var.items():
-            visited.add(root_var)
-        for root_var in visited:
             var_throughput = 1
             if self.update_spacing[root_var] is not None:
                 spacing = self.update_spacing[root_var]
                 var_throughput += spacing * (throughput_cycle - 1)
             write_throughput += var_throughput
+        if self._num_ports == 1:
+            # single port memory. need to satisfy the throughput
+            port_size = int(math.ceil((read_throughput + write_throughput)
+                                      / total_cycle))
+            return port_size
+        else:
+            max_throughput = max(read_throughput, write_throughput)
+            port_size = int(math.ceil(max_throughput / total_cycle))
+            return port_size
 
     def get_minimum_port_size(self):
         """Get memory port size. The unit is the per access, e.g. 2 for a
