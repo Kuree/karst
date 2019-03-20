@@ -139,3 +139,11 @@ def test_copy():
     exp1.right.value = 2
     assert exp1.eq(exp2)
     assert exp2.right.eval() == 4 and exp1.right.eval() == 2
+
+
+def test_assign():
+    model = MemoryModel(42)
+    model.Variable("a", 4, 4)
+    model.a = 1
+    assert model.context
+    assert str(model.context[0]) == "a = 1"

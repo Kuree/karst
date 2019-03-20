@@ -42,7 +42,6 @@ def define_fifo(*args, **kwargs):
         # state control variables
         read_addr = fifo_model.Variable("read_addr", 16, 0)
         write_addr = fifo_model.Variable("write_addr", 16, 0)
-        fifo_model.Variable("word_count", 16, 0)
 
         # ready port name
         fifo_model.Variable("RDY_enqueue", 1)
@@ -63,7 +62,6 @@ def define_fifo(*args, **kwargs):
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
             # state update
             fifo_model.write_addr = (fifo_model.write_addr + 1) % mem_size
-            fifo_model.word_count = fifo_model.word_count + 1
 
             # notice that we can make function calls here as long as it's
             # marked with model.mark
@@ -74,8 +72,7 @@ def define_fifo(*args, **kwargs):
         def dequeue():
             fifo_model.data_out = fifo_model[fifo_model.read_addr]
             # state update
-            fifo_model.read_addr = fifo_model.read_addr + 1
-            fifo_model.word_count = (fifo_model.word_count - 1) % mem_size
+            fifo_model.read_addr = (fifo_model.read_addr + 1) % mem_size
 
             update_state()
 
@@ -85,7 +82,6 @@ def define_fifo(*args, **kwargs):
         def clear():
             fifo_model.read_addr = 0
             fifo_model.write_addr = 0
-            fifo_model.word_count = 0
             fifo_model.RDY_dequeue = 0
             fifo_model.RDY_enqueue = 1
 
@@ -111,9 +107,8 @@ def define_line_buffer(*args, **kwargs):
             data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
         lb_model.PortIn("data_in", 16)
         # state control variables
-        lb_model.Variable("read_addr", 16, 0)
-        lb_model.Variable("write_addr", 16, 0)
-        lb_model.Variable("word_count", 16, 0)
+        read_addr = lb_model.Variable("read_addr", 16, 0)
+        write_addr = lb_model.Variable("write_addr", 16, 0)
 
         lb_model.Constant("depth", depth)
         lb_model.Constant("num_row", rows)
@@ -129,11 +124,8 @@ def define_line_buffer(*args, **kwargs):
                 data_outs[idx](lb_model[(lb_model.read_addr + depth * idx)
                                         % buffer_size])
 
-            if lb_model.word_count >= buffer_size - 1:
+            if write_addr - read_addr > buffer_size:
                 lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
-
-            if lb_model.word_count < buffer_size:
-                lb_model.word_count = lb_model.word_count + 1
 
             return data_outs
 
@@ -141,7 +133,6 @@ def define_line_buffer(*args, **kwargs):
         def clear():
             lb_model.read_addr = 0
             lb_model.write_addr = 0
-            lb_model.word_count = 0
             # line buffer is already ready to enqueue
             lb_model.RDY_enqueue = 1
 

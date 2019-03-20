@@ -71,10 +71,6 @@ class MemoryModel:
 
         self._initialized = True
 
-    def set_mem_size(self, size: int):
-        self._mem = Memory(size, self)
-        self.mem_size = size
-
     def define_variable(self, name: str, bit_width: int,
                         value: int = 0) -> Variable:
         if name in self._variables:

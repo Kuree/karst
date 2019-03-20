@@ -139,11 +139,11 @@ def test_fifo_update_states():
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)
     variable_update = get_updated_variables(updates)
-    assert len(variable_update) == 4
+    assert len(variable_update) == 3
     stmts = statements["dequeue"]
     updates = get_state_updates(stmts)
     variable_update = get_updated_variables(updates)
-    assert len(variable_update) == 4
+    assert len(variable_update) == 3
 
     access = get_memory_access(fifo)
     dequeue_access = access["dequeue"]
@@ -162,4 +162,4 @@ def test_lb_update_states():
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)
     variable_update = get_updated_variables(updates)
-    assert len(variable_update) == 3
+    assert len(variable_update) == 2
