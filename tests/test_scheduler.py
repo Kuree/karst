@@ -5,7 +5,7 @@ import pytest
 
 @pytest.mark.parametrize("num_ports", (1, 2))
 def test_basic_scheduler_fifo(num_ports):
-    fifo = define_fifo(42)
+    fifo = define_fifo(4)
     scheduler = BasicScheduler(fifo, num_ports)
     # this should be already tested in the backend, some asserts here
     # just to be sure it's doing the correct thing
@@ -17,7 +17,7 @@ def test_basic_scheduler_fifo(num_ports):
 
 @pytest.mark.parametrize("num_ports", (1, 2))
 def test_basic_scheduler_sram(num_ports):
-    sram = define_sram(42)
+    sram = define_sram(4)
     scheduler = BasicScheduler(sram, num_ports)
     assert len(scheduler.update_spacing) == 1
     assert scheduler.update_spacing[sram.addr] is None
@@ -28,7 +28,7 @@ def test_basic_scheduler_sram(num_ports):
 @pytest.mark.parametrize("num_ports", (1, 2))
 def test_basic_scheduler_lb(num_ports):
     num_row = 4
-    line_depth = 42
+    line_depth = 4
     lb = define_line_buffer(line_depth, num_row)
     scheduler = BasicScheduler(lb, num_ports)
     assert len(scheduler.update_spacing) == 2

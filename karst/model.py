@@ -54,6 +54,8 @@ class Memory:
 
 class MemoryModel:
     def __init__(self, size: int):
+        assert size != 0 and ((size & (size - 1)) == 0),\
+            f"{size} has to be 2's power"
         self._initialized = False
         self._variables = {}
         self._ports = {}

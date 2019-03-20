@@ -5,7 +5,7 @@ from karst.basic import define_sram, define_fifo, define_line_buffer
 
 
 def test_exclusive_expression():
-    parent = MemoryModel(10)
+    parent = MemoryModel(1)
     a = parent.Variable("a", 16)
     b = parent.Variable("b", 16)
 
@@ -17,7 +17,7 @@ def test_exclusive_expression():
 
 
 def test_remove_mod():
-    parent = MemoryModel(10)
+    parent = MemoryModel(1)
     a = parent.Variable("a", 16)
     b = parent.Variable("b", 16)
     exp = (a % b) % b
@@ -26,7 +26,7 @@ def test_remove_mod():
 
 
 def test_linear_spacing():
-    parent = MemoryModel(10)
+    parent = MemoryModel(1)
     a = parent.Variable("a", 16)
 
     assert get_linear_spacing(a, a + Const(1), a + Const(2)) == (True, 1)
@@ -38,7 +38,7 @@ def test_linear_spacing():
 
 
 def test_simple_memory_access():
-    parent = MemoryModel(10)
+    parent = MemoryModel(1)
     a = parent.Variable("a", 16)
     b = parent.Variable("b", 16)
     r = visit_mem_access(a + b)
@@ -47,7 +47,7 @@ def test_simple_memory_access():
 
 def test_construct_sym_expr_tree():
     symbol_table = {}
-    parent = MemoryModel(10)
+    parent = MemoryModel(1)
     a = parent.Variable("a", 16)
     b = parent.Constant("b", 2)
     construct_sym_expr_tree(b, symbol_table)
@@ -57,7 +57,7 @@ def test_construct_sym_expr_tree():
 
 
 def test_sram_memory_access():
-    sram = define_sram(100)
+    sram = define_sram(1)
     access = get_memory_access(sram)
     assert len(access) == 2
     read_access = access["read"]
@@ -82,7 +82,7 @@ def test_sram_memory_access():
 
 
 def test_fifo_memory_access():
-    fifo = define_fifo(20)
+    fifo = define_fifo(1)
     access = get_memory_access(fifo)
     assert len(access) == 2
     enqueue = access["enqueue"]
@@ -116,7 +116,7 @@ def test_line_buffer_memory_access(num_row, line_size):
 
 
 def test_sram_update_states():
-    sram = define_sram(20)
+    sram = define_sram(1)
     statements = sram.produce_statements()
     stmts = statements["read"]
     updates = get_state_updates(stmts)
@@ -134,7 +134,7 @@ def test_sram_update_states():
 
 
 def test_fifo_update_states():
-    fifo = define_fifo(20)
+    fifo = define_fifo(2)
     statements = fifo.produce_statements()
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)

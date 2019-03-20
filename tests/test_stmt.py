@@ -2,7 +2,7 @@ from karst.model import *
 
 
 def test_if_eq():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 1)
     v2 = model.Variable("b", 1)
     v3 = model.Variable("c", 1)
@@ -19,7 +19,7 @@ def test_if_eq():
 
 
 def test_if_bool():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 1)
 
     stmt = model.If(True, v1(1)).Else(v1(2))
@@ -28,7 +28,7 @@ def test_if_bool():
 
 
 def test_return_eq():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 1)
     v2 = model.Variable("b", 1)
 

@@ -3,7 +3,7 @@ from karst.model import MemoryModel, define_memory
 
 
 def test_sram():
-    sram = define_sram(100)
+    sram = define_sram(64)
     # inputs
     sram.data_in = 42
     sram.addr = 24
@@ -15,7 +15,7 @@ def test_sram():
 
 
 def test_fifo():
-    fifo_depth = 10
+    fifo_depth = 8
     fifo = define_fifo(fifo_depth)
     fifo.clear()
     # try to dequeue an empty queue
@@ -66,7 +66,7 @@ def test_generic_memory():
     # just to test the interface
     @define_memory
     def define_mem():
-        mem = MemoryModel(10)
+        mem = MemoryModel(1)
         mem.Variable("a", 1, 0)
 
         @mem.action(default_rdy_value=1,

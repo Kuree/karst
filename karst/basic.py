@@ -1,7 +1,7 @@
 from karst.model import define_memory, MemoryModel
 
 
-def define_sram(*args, **kwargs):
+def define_sram(size_):
     @define_memory
     def sram(size: int):
         """Models the functional behavior of an one-output sram"""
@@ -26,10 +26,10 @@ def define_sram(*args, **kwargs):
 
         return sram_model
 
-    return sram(*args, **kwargs)
+    return sram(size_)
 
 
-def define_fifo(*args, **kwargs):
+def define_fifo(size_):
     @define_memory
     def fifo(size, delay_threshold: int = 0):
         fifo_model = MemoryModel(size)
@@ -46,8 +46,9 @@ def define_fifo(*args, **kwargs):
         # ready port name
         fifo_model.Variable("RDY_enqueue", 1)
         fifo_model.Variable("RDY_dequeue", 1)
-        # TODO: fix this
-        #       Python doesn't allow to overload NOT
+
+        # convert the virtual ports to the ports that we care about
+        # we invert the values here
         fifo_model.almost_full = fifo_model.RDY_enqueue ^ 1
         fifo_model.almost_empty = fifo_model.RDY_dequeue ^ 1
 
@@ -56,7 +57,6 @@ def define_fifo(*args, **kwargs):
 
         mem_size = size
 
-        # use the default en_ENQUEUE here
         @fifo_model.action(default_rdy_value=1)
         def enqueue():
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
@@ -95,13 +95,16 @@ def define_fifo(*args, **kwargs):
                                      (mem_size - fifo_model.almost_t)
 
         return fifo_model
-    return fifo(*args, **kwargs)
+    return fifo(size_)
 
 
-def define_line_buffer(*args, **kwargs):
+def define_line_buffer(depth_, rows_):
     @define_memory
-    def line_buffer(depth: int, rows: int):
-        lb_model = MemoryModel(depth * rows)
+    def line_buffer(depth: int, rows: int, mem_size: int = 0):
+        if mem_size == 0:
+            # get the minimal size
+            mem_size = 1 << (depth * rows-1).bit_length()
+        lb_model = MemoryModel(mem_size)
         data_outs = []
         for i in range(rows):
             data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
@@ -112,20 +115,19 @@ def define_line_buffer(*args, **kwargs):
 
         lb_model.Constant("depth", depth)
         lb_model.Constant("num_row", rows)
-        buffer_size = depth * rows
 
         @lb_model.action(default_rdy_value=1)
         def enqueue():
             lb_model[lb_model.write_addr] = lb_model.data_in
             # state update
-            lb_model.write_addr = (lb_model.write_addr + 1) % buffer_size
+            lb_model.write_addr = (lb_model.write_addr + 1) % mem_size
 
             for idx in range(rows):
                 data_outs[idx](lb_model[(lb_model.read_addr + depth * idx)
-                                        % buffer_size])
+                                        % mem_size])
 
-            if write_addr - read_addr > buffer_size:
-                lb_model.read_addr = (lb_model.read_addr + 1) % buffer_size
+            if write_addr - read_addr > mem_size:
+                lb_model.read_addr = (lb_model.read_addr + 1) % mem_size
 
             return data_outs
 
@@ -137,4 +139,4 @@ def define_line_buffer(*args, **kwargs):
             lb_model.RDY_enqueue = 1
 
         return lb_model
-    return line_buffer(*args, **kwargs)
+    return line_buffer(depth_, rows_)

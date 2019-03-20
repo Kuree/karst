@@ -23,7 +23,7 @@ def test_eq():
 
 
 def test_mul():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
 
@@ -36,7 +36,7 @@ def test_mul():
 
 
 def test_rmod():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
 
@@ -47,7 +47,7 @@ def test_rmod():
 
 
 def test_le():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
 
@@ -58,7 +58,7 @@ def test_le():
 
 
 def test_shift():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
 
@@ -73,7 +73,7 @@ def test_shift():
 
 
 def test_sub():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
 
     v1(5)
@@ -82,7 +82,7 @@ def test_sub():
 
 
 def test_nested_eval():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
     v2(4)
@@ -98,7 +98,7 @@ def test_hash_repr():
 
 
 def test_add():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v2 = model.Variable("b", 4)
     v1(1)
@@ -108,14 +108,14 @@ def test_add():
 
 
 def test_xor():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4, 4)
     v2 = model.Variable("b", 4, 4)
     assert (v1 ^ v2).eval() == (v1 ^ 4).eval()
 
 
 def test_const():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4)
     v1(1)
     v2 = model.Constant("b", v1)
@@ -123,7 +123,7 @@ def test_const():
 
 
 def test_copy():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     v1 = model.Variable("a", 4, 4)
     v2 = v1.copy()
     v3 = model.Variable("b", 4, 4)
@@ -142,7 +142,7 @@ def test_copy():
 
 
 def test_assign():
-    model = MemoryModel(42)
+    model = MemoryModel(4)
     model.Variable("a", 4, 4)
     model.a = 1
     assert model.context
