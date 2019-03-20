@@ -65,6 +65,7 @@ class MemoryModel:
         self.mem_size = size
 
         self._stmts = {}
+        self._global_stmts = []
 
         self.context = []
 
@@ -107,6 +108,9 @@ class MemoryModel:
 
     def action(self, default_rdy_value: int = 0, en_port_name: str = "",
                rdy_port_name: str = ""):
+        if self.context:
+            self._global_stmts += self.context
+            self.context.clear()
         return self._Action(self, default_rdy_value, en_port_name,
                             rdy_port_name)
 
@@ -188,7 +192,7 @@ class MemoryModel:
                 # port aliasing
                 self.model._ports[f"RDY_{self.name}"] = \
                     self.model[rdy_port_name]
-                self.model[rdy_port_name] = self.default_rdy_value
+                self.model[rdy_port_name].value = self.default_rdy_value
             else:
                 self.model.Variable(f"RDY_{self.name}", 1,
                                     self.default_rdy_value)
@@ -223,7 +227,7 @@ class MemoryModel:
             # use READY signal here
             # only execute the statement if it's valid
             ready_signal = self[f"RDY_{action_name}"]
-            stmts = self._stmts[action_name]
+            stmts = self._stmts[action_name] + self._global_stmts
             if ready_signal.eval() != 1:
                 # latch out the return values
                 for stmt in stmts:
@@ -234,13 +238,15 @@ class MemoryModel:
                         else:
                             return v
                 return
+            return_v = None
             for stmt in stmts:
                 v = stmt.eval()
                 if isinstance(stmt, ReturnStatement):
-                    if len(v) == 1:
-                        return v[0]
-                    else:
-                        return v
+                    if len(v) == 1 and return_v is None:
+                        return_v = v[0]
+                    elif return_v is None:
+                        return_v = v
+            return return_v
         return wrapper
 
     @classmethod

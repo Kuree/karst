@@ -40,16 +40,17 @@ def define_fifo(*args, **kwargs):
         fifo_model.PortOut("almost_full", 1)
 
         # state control variables
-        fifo_model.Variable("read_addr", 16, 0)
-        fifo_model.Variable("write_addr", 16, 0)
+        read_addr = fifo_model.Variable("read_addr", 16, 0)
+        write_addr = fifo_model.Variable("write_addr", 16, 0)
         fifo_model.Variable("word_count", 16, 0)
 
         # ready port name
-        fifo_model.Variable("not_almost_full", 1)
-        fifo_model.Variable("not_almost_empty", 1)
+        fifo_model.Variable("RDY_enqueue", 1)
+        fifo_model.Variable("RDY_dequeue", 1)
         # TODO: fix this
-        fifo_model.almost_full = fifo_model.not_almost_full ^ 1
-        fifo_model.almost_empty = fifo_model.not_almost_empty ^ 1
+        #       Python doesn't allow to overload NOT
+        fifo_model.almost_full = fifo_model.RDY_enqueue ^ 1
+        fifo_model.almost_empty = fifo_model.RDY_dequeue ^ 1
 
         # some other constants
         fifo_model.Constant("almost_t", delay_threshold)
@@ -57,8 +58,7 @@ def define_fifo(*args, **kwargs):
         mem_size = size
 
         # use the default en_ENQUEUE here
-        @fifo_model.action(default_rdy_value=1,
-                           rdy_port_name="not_almost_full")
+        @fifo_model.action(default_rdy_value=1)
         def enqueue():
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
             # state update
@@ -67,11 +67,10 @@ def define_fifo(*args, **kwargs):
 
             # notice that we can make function calls here as long as it's
             # marked with model.mark
-            # the function calls will be executed as normal python code, same
-            # as if statement
+            # the function calls will be executed as normal python code
             update_state()
 
-        @fifo_model.action(rdy_port_name="not_almost_empty")
+        @fifo_model.action()
         def dequeue():
             fifo_model.data_out = fifo_model[fifo_model.read_addr]
             # state update
@@ -87,22 +86,17 @@ def define_fifo(*args, **kwargs):
             fifo_model.read_addr = 0
             fifo_model.write_addr = 0
             fifo_model.word_count = 0
-            fifo_model.not_almost_empty = 0
-            fifo_model.not_almost_full = 1
+            fifo_model.RDY_dequeue = 0
+            fifo_model.RDY_enqueue = 1
 
         @fifo_model.mark
         def update_state():
             # There is an astor bug that prevent long if statements
             # being converted
-            if fifo_model.word_count > fifo_model.almost_t:
-                fifo_model.not_almost_empty = 1
-            else:
-                fifo_model.not_almost_empty = 0
-
-            if fifo_model.word_count < (mem_size - fifo_model.almost_t):
-                fifo_model.not_almost_full = 1
-            else:
-                fifo_model.not_almost_full = 0
+            fifo_model.RDY_dequeue = (write_addr - read_addr) > \
+                                     fifo_model.almost_t
+            fifo_model.RDY_enqueue = (write_addr - read_addr) < \
+                                     (mem_size - fifo_model.almost_t)
 
         return fifo_model
     return fifo(*args, **kwargs)

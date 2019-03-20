@@ -1,4 +1,5 @@
 from karst.basic import define_sram, define_fifo, define_line_buffer
+from karst.model import MemoryModel, define_memory
 
 
 def test_sram():
@@ -31,7 +32,7 @@ def test_fifo():
     fifo.enqueue()
     fifo.data_in = 45
     fifo.enqueue()
-    # assert fifo.almost_empty == 0
+    assert fifo.almost_empty == 0
     assert fifo.dequeue() == 43
     assert fifo.dequeue() == 44
     assert fifo.dequeue() == 45
@@ -59,3 +60,22 @@ def test_line_buffer():
     lb.data_in = 45
     outs = lb.enqueue()
     assert outs[0] == 42 and outs[1] == 44
+
+
+def test_generic_memory():
+    # just to test the interface
+    @define_memory
+    def define_mem():
+        mem = MemoryModel(10)
+        mem.Variable("a", 1, 0)
+
+        @mem.action(default_rdy_value=1,
+                    en_port_name="en", rdy_port_name="rdy")
+        def test():
+            mem.a = 1
+
+        return mem
+
+    model = define_mem()
+    model.test()
+    assert model.a == 1
