@@ -4,6 +4,7 @@ from karst.model import MemoryModel, define_memory
 
 def test_sram():
     sram = define_sram(64)
+    sram.reset()
     # inputs
     sram.data_in = 42
     sram.addr = 24
@@ -17,7 +18,7 @@ def test_sram():
 def test_fifo():
     fifo_depth = 8
     fifo = define_fifo(fifo_depth)
-    fifo.clear()
+    fifo.reset()
     # try to dequeue an empty queue
     fifo.dequeue()
     assert fifo.RDY_dequeue == 0
@@ -50,7 +51,7 @@ def test_fifo():
 
 def test_line_buffer():
     lb = define_line_buffer(2, 2)
-    lb.clear()
+    lb.reset()
     lb.data_in = 42
     lb.enqueue()
     lb.data_in = 43
@@ -69,8 +70,7 @@ def test_generic_memory():
         mem = MemoryModel(1)
         mem.Variable("a", 1, 0)
 
-        @mem.action(default_rdy_value=1,
-                    en_port_name="en", rdy_port_name="rdy")
+        @mem.action(en_port_name="en", rdy_port_name="rdy")
         def test():
             mem.a = 1
 

@@ -104,13 +104,11 @@ class MemoryModel:
         self._consts[name] = const
         return const
 
-    def action(self, default_rdy_value: int = 0, en_port_name: str = "",
-               rdy_port_name: str = ""):
+    def action(self, en_port_name: str = "", rdy_port_name: str = ""):
         if self.context:
             self._global_stmts += self.context
             self.context.clear()
-        return self._Action(self, default_rdy_value, en_port_name,
-                            rdy_port_name)
+        return self._Action(self, en_port_name, rdy_port_name)
 
     def __getitem__(self, item):
         if isinstance(item, Value):
@@ -161,11 +159,10 @@ class MemoryModel:
         return return_
 
     class _Action:
-        def __init__(self, model: "MemoryModel", default_rdy_value: int,
+        def __init__(self, model: "MemoryModel",
                      en_port_name: str, rdy_port_name: str):
             self.name = ""
             self.model = model
-            self.default_rdy_value = default_rdy_value
             self.en_port_name = en_port_name
             self.rdy_port_name = rdy_port_name
 
@@ -182,18 +179,14 @@ class MemoryModel:
                 # port aliasing
                 self.model._ports[f"EN_{self.name}"] = \
                     self.model[en_port_name]
-                self.model[en_port_name].value = self.default_rdy_value
             else:
-                self.model.Variable(f"EN_{self.name}", 1,
-                                    self.default_rdy_value)
+                self.model.Variable(f"EN_{self.name}", 1)
             if rdy_port_name in self.model:
                 # port aliasing
                 self.model._ports[f"RDY_{self.name}"] = \
                     self.model[rdy_port_name]
-                self.model[rdy_port_name].value = self.default_rdy_value
             else:
-                self.model.Variable(f"RDY_{self.name}", 1,
-                                    self.default_rdy_value)
+                self.model.Variable(f"RDY_{self.name}", 1)
 
             def wrapper():
                 # we need to record every expressions here
@@ -251,6 +244,13 @@ class MemoryModel:
     def mark(cls, func):
         def wrapper(*args, **kwargs):
             func(*args, **kwargs)
+        return wrapper
+
+    @classmethod
+    def async_reset(cls, func):
+        def wrapper(*args, **kwargs):
+            func(*args, **kwargs)
+        wrapper.__name__ = func.__name__
         return wrapper
 
     # alias
