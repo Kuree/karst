@@ -13,6 +13,7 @@ def test_basic_scheduler_fifo(num_ports):
     assert scheduler.update_spacing[fifo.read_addr] == 1
     assert scheduler.update_spacing[fifo.write_addr] == 1
     assert scheduler.get_minimum_cycle() == 2 / num_ports
+    scheduler.get_port_size(2, 2)
 
 
 @pytest.mark.parametrize("num_ports", (1, 2))
@@ -23,6 +24,7 @@ def test_basic_scheduler_sram(num_ports):
     assert scheduler.update_spacing[sram.addr] is None
     assert scheduler.access_spacing[sram.addr] is None
     assert scheduler.get_minimum_cycle() == 2 / num_ports
+    scheduler.get_port_size(2, 2)
 
 
 @pytest.mark.parametrize("num_ports", (1, 2))
@@ -42,3 +44,4 @@ def test_basic_scheduler_lb(num_ports):
         assert scheduler.access_spacing[var] == line_depth
     assert scheduler.get_minimum_cycle() == num_row if num_ports == 2 else \
         num_row + 1
+    scheduler.get_port_size(num_row + 1, num_row + 1)

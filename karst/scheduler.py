@@ -99,17 +99,41 @@ class BasicScheduler(Scheduler):
         else:
             return max(r_result, w_result)
 
+    def get_port_size(self, throughput_cycle: int, total_cycle: int):
+        # we need to compute the how many read and write throughput
+        # in total
+        # notice that due to stride we need to extra careful how the throughput
+        # is defined
+        assert total_cycle >= throughput_cycle
+        assert total_cycle >= self.get_minimum_cycle()
+        read_throughput = 0
+        visited = set()
+        for ac_var, root_var in self.read_var.items():
+            visited.add(root_var)
+
+        for root_var in visited:
+            var_throughput = 1
+            if self.update_spacing[root_var] is not None:
+                spacing = self.update_spacing[root_var]
+                var_throughput += spacing * (throughput_cycle - 1)
+            read_throughput += var_throughput
+
+        write_throughput = 0
+        visited.clear()
+        for ac_var, root_var in self.write_var.items():
+            visited.add(root_var)
+        for root_var in visited:
+            var_throughput = 1
+            if self.update_spacing[root_var] is not None:
+                spacing = self.update_spacing[root_var]
+                var_throughput += spacing * (throughput_cycle - 1)
+            write_throughput += var_throughput
+
     def get_minimum_port_size(self):
         """Get memory port size. The unit is the per access, e.g. 2 for a
         32-bit port if the read and write uses 16-bit"""
-        # cycle = self.get_minimum_cycle()
-        # this is determined by the output bandwidth
-        # I had a conjecture that that the minimum port size is the same
-        # as the minimum cycles
-        # however, it is not true for single-port SRAM.
-        # basically if one cycle only has read or one cycle only has write, it
-        # can be used as single
-        # return cycle
+        # notice tht this is not the same as the minimal clock cycle if there
+        # is a stride in either read or write
 
     def schedule(self):
         """TODO"""
