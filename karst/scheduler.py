@@ -6,6 +6,7 @@ from karst.backend import get_updated_variables, get_state_updates, \
 from karst.values import Expression, Variable
 import abc
 import math
+from typing import Union
 
 
 class Scheduler:
@@ -58,6 +59,19 @@ class Scheduler:
     @abc.abstractmethod
     def schedule(self):
         """schedule for the memory resource"""
+
+
+class State:
+    def __init__(self, state_value: int,
+                 state_transition: Dict[Expression,
+                                        Union["State", None]] = None):
+        self.state_value = state_value
+        state_transition = {} if state_transition is None else state_transition
+        self.state_transition = state_transition
+        self.access_var: Expression = None
+
+    def __hash__(self):
+        return hash(self.state_value)
 
 
 class BasicScheduler(Scheduler):
@@ -132,11 +146,39 @@ class BasicScheduler(Scheduler):
             port_size = int(math.ceil(max_throughput / total_cycle))
             return port_size
 
-    def get_minimum_port_size(self):
-        """Get memory port size. The unit is the per access, e.g. 2 for a
-        32-bit port if the read and write uses 16-bit"""
-        # notice tht this is not the same as the minimal clock cycle if there
-        # is a stride in either read or write
-
     def schedule(self):
-        """TODO"""
+        """The basic scheduler tries its best to schedule for minimum cycle
+        delay"""
+        cycle = self.get_minimum_cycle()
+        port_size = self.get_port_size(cycle, cycle)
+        total_num_state = len(self.read_var) + len(self.write_var)
+        # state 0 is always do nothing
+        states = [State(0, None)]
+        for state_id in range(1, total_num_state + 1):
+            states.append(State(state_id, None))
+        # for now we can only do one read and one write
+        print(self.update_spacing)
+        assert len(self.update_spacing) <= 2
+        (read_var, num_read_vars), (write_var, num_write_vars)\
+            = self.__get_read_write_var()
+        assert read_var is not None and write_var is not None
+        # should we prefetch the read?
+        if self.update_spacing[read_var] is not None:
+            # we need to prefetch them, starting
+            pass
+
+    def __get_read_write_var(self):
+        # get the read variable name
+        read_var: Variable = None
+        write_var: Variable = None
+        num_read_vars = 0
+        num_write_vars = 0
+        for _, root in self.read_var.items():
+            assert read_var is None or read_var.eq(root)
+            read_var = root
+            num_read_vars += 1
+        for _, root in self.write_var.items():
+            assert write_var is None or write_var.eq(root)
+            write_var = root
+            num_write_vars += 1
+        return (read_var, num_read_vars), (write_var, num_write_vars)

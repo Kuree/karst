@@ -15,6 +15,7 @@ def test_basic_scheduler_fifo(num_ports):
     assert scheduler.get_minimum_cycle() == 2 / num_ports
     port_size = scheduler.get_port_size(2, 2)
     assert port_size == 1 if num_ports == 2 else 2
+    scheduler.schedule()
 
 
 @pytest.mark.parametrize("num_ports", (1, 2))
@@ -29,6 +30,7 @@ def test_basic_scheduler_sram(num_ports):
     # this is random access for the same address, so no matter how many number
     # of ports you have, you only need size 1
     assert port_size == 1
+    scheduler.schedule()
 
 
 @pytest.mark.parametrize("num_ports", (1, 2))
@@ -51,3 +53,4 @@ def test_basic_scheduler_lb(num_ports):
         num_row + 1
     port_size = scheduler.get_port_size(minimum_cycle, minimum_cycle)
     assert port_size == minimum_cycle
+    scheduler.schedule()

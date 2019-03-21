@@ -125,7 +125,7 @@ def define_line_buffer(depth_, rows_):
         lb_model.Constant("depth", depth)
         lb_model.Constant("num_row", rows)
 
-        @lb_model.action(en_port_name="en")
+        @lb_model.action(en_port_name="wen")
         def enqueue():
             lb_model[lb_model.write_addr] = lb_model.data_in
             # state update
