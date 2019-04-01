@@ -3,13 +3,14 @@ from karst.macro import *
 
 
 @pytest.mark.parametrize("ports", [(1, 1), (2, 1), (2, 2)])
-@pytest.mark.parametrize("size", [1 << 4, 1 << 8])
-@pytest.mark.parametrize("port_size", [1 << 2, 1 << 4])
 @pytest.mark.parametrize("partial_write", [True, False])
-def test_port_generation(ports, size, port_size, partial_write):
+@pytest.mark.parametrize("port_size", [1 << 4])
+def test_port_generation(ports, port_size, partial_write):
     num_ports, num_en_ports = ports
-    sram = SRAM(size=size, port_size=port_size, partial_write=partial_write,
-                num_en_ports=num_en_ports, num_ports=num_ports)
+    mem_size_log = 4
+    sram = SRAM(size=1 << mem_size_log, port_size=port_size,
+                partial_write=partial_write, num_en_ports=num_en_ports,
+                num_ports=num_ports)
     ports = sram.get_ports()
     wen_count = 0
     ren_count = 0
@@ -23,13 +24,14 @@ def test_port_generation(ports, size, port_size, partial_write):
             if port_name[len(expected_name):].isdigit():
                 return True
         return False
-    for port_name in ports:
+    for port_name, size_ in ports.items():
         if has_port(port_name, "wen"):
             wen_count += 1
         elif has_port(port_name, "ren"):
             ren_count += 1
         elif has_port(port_name, "addr"):
             addr_count += 1
+            assert size_ == mem_size_log
         elif has_port(port_name, "data_in"):
             data_in_count += 1
         elif has_port(port_name, "data_out"):
