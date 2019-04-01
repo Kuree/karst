@@ -4,16 +4,16 @@ from karst.backend import get_updated_variables, get_state_updates, \
     get_memory_access, get_var_memory_access, get_mem_access_temporal_spacing,\
     get_linear_spacing
 from karst.values import Expression, Variable
+from karst.macro import SRAMMacro
 import abc
 import math
 from typing import Union
 
 
 class Scheduler:
-    def __init__(self, model: MemoryModel, num_ports: int = 1):
-        assert num_ports in (1, 2), f"{num_ports} ports not supported"
+    def __init__(self, model: MemoryModel, sram_macro: SRAMMacro):
         self._model = model
-        self._num_ports = num_ports
+        self._num_ports = sram_macro.num_ports
 
         # the only thing we care about
         self.update_spacing = {}
@@ -68,15 +68,15 @@ class State:
         self.state_value = state_value
         state_transition = {} if state_transition is None else state_transition
         self.state_transition = state_transition
-        self.access_var: Expression = None
+        self.access_var: Expression
 
     def __hash__(self):
         return hash(self.state_value)
 
 
 class BasicScheduler(Scheduler):
-    def __init__(self, model: MemoryModel, num_ports: int = 1):
-        super().__init__(model, num_ports)
+    def __init__(self, model: MemoryModel, sram_macro: SRAMMacro):
+        super().__init__(model, sram_macro)
 
     def get_minimum_cycle(self):
         """Get the minimum number of cycles needed to perform all the actions
@@ -169,8 +169,8 @@ class BasicScheduler(Scheduler):
 
     def __get_read_write_var(self):
         # get the read variable name
-        read_var: Variable = None
-        write_var: Variable = None
+        read_var: Union[Variable, None] = None
+        write_var: Union[Variable, None] = None
         num_read_vars = 0
         num_write_vars = 0
         for _, root in self.read_var.items():

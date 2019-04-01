@@ -8,9 +8,9 @@ from karst.macro import *
 def test_port_generation(ports, port_size, partial_write):
     num_ports, num_en_ports = ports
     mem_size_log = 4
-    sram = SRAM(size=1 << mem_size_log, port_size=port_size,
-                partial_write=partial_write, num_en_ports=num_en_ports,
-                num_ports=num_ports)
+    sram = SRAMMacro(size=1 << mem_size_log, port_size=port_size,
+                     partial_write=partial_write, num_en_ports=num_en_ports,
+                     num_ports=num_ports)
     ports = sram.get_ports()
     wen_count = 0
     ren_count = 0

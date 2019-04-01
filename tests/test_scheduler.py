@@ -6,7 +6,8 @@ import pytest
 @pytest.mark.parametrize("num_ports", (1, 2))
 def test_basic_scheduler_fifo(num_ports):
     fifo = define_fifo(4)
-    scheduler = BasicScheduler(fifo, num_ports)
+    sram_macro = SRAMMacro(1 << 4, 1 << 4, num_ports=num_ports)
+    scheduler = BasicScheduler(fifo, sram_macro)
     # this should be already tested in the backend, some asserts here
     # just to be sure it's doing the correct thing
     assert len(scheduler.update_spacing) == 2
@@ -21,7 +22,8 @@ def test_basic_scheduler_fifo(num_ports):
 @pytest.mark.parametrize("num_ports", (1, 2))
 def test_basic_scheduler_sram(num_ports):
     sram = define_sram(4)
-    scheduler = BasicScheduler(sram, num_ports)
+    sram_macro = SRAMMacro(1 << 4, 1 << 4, num_ports=num_ports)
+    scheduler = BasicScheduler(sram, sram_macro)
     assert len(scheduler.update_spacing) == 1
     assert scheduler.update_spacing[sram.addr] is None
     assert scheduler.access_spacing[sram.addr] is None
@@ -38,7 +40,8 @@ def test_basic_scheduler_lb(num_ports):
     num_row = 4
     line_depth = 4
     lb = define_line_buffer(line_depth, num_row)
-    scheduler = BasicScheduler(lb, num_ports)
+    sram_macro = SRAMMacro(1 << 4, 1 << 4, num_ports=num_ports)
+    scheduler = BasicScheduler(lb, sram_macro)
     assert len(scheduler.update_spacing) == 2
     assert scheduler.update_spacing[lb.read_addr] == 1
     assert scheduler.update_spacing[lb.write_addr] == 1

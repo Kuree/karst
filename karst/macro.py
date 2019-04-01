@@ -2,7 +2,7 @@ import math
 from typing import Dict
 
 
-class SRAM:
+class SRAMMacro:
     def __init__(self, size: int, port_size: int, partial_write: bool = True,
                  num_ports: int = 1, num_en_ports: int = 1):
         assert size != 0 and ((size & (size - 1)) == 0), \
@@ -10,6 +10,7 @@ class SRAM:
         self.size = size
         self.port_size = port_size
         self.partial_write = partial_write
+        assert num_ports in (1, 2), f"{num_ports} ports not supported"
         self.num_ports = num_ports
         assert num_en_ports <= num_ports, \
             f"number of enable ports ({num_en_ports} cannot be larger " \
