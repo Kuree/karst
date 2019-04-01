@@ -197,6 +197,7 @@ class MemoryModel:
                 if v is not None:
                     self.model.Return(v)
                 self.model._stmts[self.name] = self.model.context[:]
+                self.model.context.clear()
                 return v
             self.model._actions[self.name] = wrapper
             return wrapper
