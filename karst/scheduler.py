@@ -13,6 +13,7 @@ from typing import Union
 class Scheduler:
     def __init__(self, model: MemoryModel, sram_macro: SRAMMacro):
         self._model = model
+        self._sram_macro = sram_macro
         self._num_ports = sram_macro.num_ports
 
         # the only thing we care about
@@ -56,6 +57,18 @@ class Scheduler:
                     # no pattern, we assume it's random access
                     self.access_spacing[var] = None
 
+        self._mem_width = self.__get_memory_width()
+
+    def __get_memory_width(self):
+        width = 0
+        for var in self.access_spacing:
+            if width == 0:
+                width = var.bit_width
+            else:
+                assert width == var.bit_width, \
+                    f"{width} doesn't match with {var} ({var.bit_width})"
+        return width
+
     @abc.abstractmethod
     def schedule(self):
         """schedule for the memory resource"""
@@ -77,10 +90,19 @@ class State:
 class BasicScheduler(Scheduler):
     def __init__(self, model: MemoryModel, sram_macro: SRAMMacro):
         super().__init__(model, sram_macro)
+        assert self._sram_macro.num_en_ports == 1,\
+            "true dual-port not supported"
 
     def get_minimum_cycle(self):
         """Get the minimum number of cycles needed to perform all the actions
         """
+        r_result, w_result = self.__get_read_write_access()
+        if self._num_ports == 1:
+            return r_result + w_result
+        else:
+            return max(r_result, w_result)
+
+    def __get_read_write_access(self):
         num_read = {}
         num_write = {}
         for ac_var, root_var in self.read_var.items():
@@ -109,10 +131,7 @@ class BasicScheduler(Scheduler):
             r_result += v
         for _, v in num_write.items():
             w_result += v
-        if self._num_ports == 1:
-            return r_result + w_result
-        else:
-            return max(r_result, w_result)
+        return r_result, w_result
 
     def get_port_size(self, throughput_cycle: int, total_cycle: int):
         # we need to compute the how many read and write throughput
@@ -121,21 +140,10 @@ class BasicScheduler(Scheduler):
         # is defined
         assert total_cycle >= throughput_cycle
         assert throughput_cycle >= self.get_minimum_cycle()
-        read_throughput = 0
-        for ac_var, root_var in self.read_var.items():
-            var_throughput = 1
-            if self.update_spacing[root_var] is not None:
-                spacing = self.update_spacing[root_var]
-                var_throughput += spacing * (throughput_cycle - 1)
-            read_throughput += var_throughput
 
-        write_throughput = 0
-        for ac_var, root_var in self.write_var.items():
-            var_throughput = 1
-            if self.update_spacing[root_var] is not None:
-                spacing = self.update_spacing[root_var]
-                var_throughput += spacing * (throughput_cycle - 1)
-            write_throughput += var_throughput
+        read_throughput = self.__get_read_throughput(throughput_cycle)
+        write_throughput = self.__get_write_throughput(throughput_cycle)
+
         if self._num_ports == 1:
             # single port memory. need to satisfy the throughput
             port_size = int(math.ceil((read_throughput + write_throughput)
@@ -145,6 +153,32 @@ class BasicScheduler(Scheduler):
             max_throughput = max(read_throughput, write_throughput)
             port_size = int(math.ceil(max_throughput / total_cycle))
             return port_size
+
+    def __get_write_throughput(self, throughput_cycle):
+        write_throughput = 0
+        for ac_var, root_var in self.write_var.items():
+            var_throughput = 1
+            if self.update_spacing[root_var] is not None:
+                spacing = self.update_spacing[root_var]
+                var_throughput += spacing * (throughput_cycle - 1)
+            write_throughput += var_throughput
+        return write_throughput
+
+    def __get_read_throughput(self, throughput_cycle):
+        read_throughput = 0
+        for ac_var, root_var in self.read_var.items():
+            var_throughput = 1
+            if self.update_spacing[root_var] is not None:
+                spacing = self.update_spacing[root_var]
+                var_throughput += spacing * (throughput_cycle - 1)
+            read_throughput += var_throughput
+        return read_throughput
+
+    def get_total_cycle(self):
+        # return the number of cycles needed to perform all the actions
+        r_result, w_result = self.__get_read_write_access()
+
+
 
     def schedule(self):
         """The basic scheduler tries its best to schedule for minimum cycle
@@ -157,7 +191,6 @@ class BasicScheduler(Scheduler):
         for state_id in range(1, total_num_state + 1):
             states.append(State(state_id, None))
         # for now we can only do one read and one write
-        print(self.update_spacing)
         assert len(self.update_spacing) <= 2
         (read_var, num_read_vars), (write_var, num_write_vars)\
             = self.__get_read_write_var()
