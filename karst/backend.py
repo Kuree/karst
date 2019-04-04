@@ -7,7 +7,7 @@ import operator
 
 def construct_sym_expr_tree(expression: Union[Expression, Variable],
                             symbol_table: Dict[str, z3.Int]):
-    if isinstance(expression, Const):
+    if isinstance(expression, (Const, Configurable)):
         return expression.value
     elif isinstance(expression, Variable):
         if expression.name not in symbol_table:
@@ -21,7 +21,7 @@ def construct_sym_expr_tree(expression: Union[Expression, Variable],
 
     if isinstance(left, Expression):
         left = construct_sym_expr_tree(left, symbol_table)
-    elif isinstance(left, Const):
+    elif isinstance(left, (Const, Configurable)):
         left = left.value
     else:
         assert isinstance(left, Variable)
@@ -31,7 +31,7 @@ def construct_sym_expr_tree(expression: Union[Expression, Variable],
 
     if isinstance(right, Expression):
         right = construct_sym_expr_tree(right, symbol_table)
-    elif isinstance(right, Const):
+    elif isinstance(right, (Const, Configurable)):
         right = right.value
     else:
         assert isinstance(right, Variable)
@@ -186,7 +186,7 @@ def get_var_memory_access(access_pattern:
                 return left
             else:
                 assert left.name == right.name, "only one variable supported"
-        elif isinstance(exp_, Variable):
+        elif isinstance(exp_, Variable) and not isinstance(exp_, Configurable):
             return exp_
         else:
             return None
@@ -264,7 +264,7 @@ def get_mem_access_temporal_spacing(updated_statements: List[AssignStatement],
         assigned_variable[var] = stmt.right
 
     def __update(exp_: Value):
-        if isinstance(exp_, Const):
+        if isinstance(exp_, (Const, Configurable)):
             return exp_
         elif isinstance(exp_, Variable):
             # loop up the new one

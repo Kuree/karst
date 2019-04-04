@@ -60,6 +60,7 @@ class MemoryModel:
         self._variables = {}
         self._ports = {}
         self._consts = {}
+        self._config_vars = {}
 
         self._actions = {}
         self._conditions = {}
@@ -104,6 +105,14 @@ class MemoryModel:
         self._consts[name] = const
         return const
 
+    def define_config(self, name: str, bit_width: int,
+                      value: int = 0) -> Configurable:
+        if name in self._config_vars:
+            return self._config_vars[name]
+        config = Configurable(name, bit_width, self, value)
+        self._config_vars[name] = config
+        return config
+
     def action(self, en_port_name: str = "", rdy_port_name: str = ""):
         if self.context:
             self._global_stmts += self.context
@@ -130,6 +139,8 @@ class MemoryModel:
             return self._ports[item]
         elif item in self._variables:
             return self._variables[item]
+        elif item in self._config_vars:
+            return self._config_vars[item]
         elif item in self._consts:
             return self._consts[item]
         else:
@@ -143,8 +154,12 @@ class MemoryModel:
         elif key in self.__dict__:
             self.__dict__[key] = value
         else:
-            variable = self._ports[key] if key in self._ports else \
-                self._variables[key]
+            if key in self._ports:
+                variable = self._ports[key]
+            elif key in self._variables:
+                variable = self._variables[key]
+            else:
+                variable = self._config_vars[key]
             variable(value)
 
     def __contains__(self, item):
@@ -259,6 +274,7 @@ class MemoryModel:
     PortIn = define_port_in
     PortOut = define_port_out
     Constant = define_const
+    Configurable = define_config
     If = define_if
     Return = define_return
 
@@ -288,11 +304,13 @@ def define_memory(func: Callable[["MemoryModel"], None]):
         assign_visitor = AssignNodeVisitor()
         action_node = assign_visitor.visit(action_node)
         ast.fix_missing_locations(action_node)
-        s2 = astor.to_source(action_node)
         # second pass to convert if statement
         if_visitor = IfNodeVisitor(model_name)
-        action_node = if_visitor.visit(action_node)
+        if_visitor.visit(action_node)
         ast.fix_missing_locations(action_node)
+        # third pass to add int() call for every for loop
+        for_transform = ForVarVisitor()
+        for_transform.visit(action_node)
 
     new_src = astor.to_source(func_tree, indent_with=" " * 2)
     func_name = func.__name__

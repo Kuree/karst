@@ -64,3 +64,36 @@ def test_if_else_transform():
     val = 2
     exec(code, {"foo": foo, "val": val})
     assert foo.value == 2 - 2
+
+
+def test_for_statement():
+    class Value:
+        def __init__(self, value):
+            self.value = value
+
+    class Foo:
+        def __init__(self):
+            self.value = 0
+            self.idx = Value(0)
+
+        def For(self, range_var, loop_var, *args):
+            for __loop_var in range(range_var):
+                self.idx.value = __loop_var
+                for value in args:
+                    self.value += value.value
+
+    def __test_func():
+        for idx in range(5):
+            idx
+
+    foo = Foo()
+    src_text = inspect.getsource(__test_func)
+    txt = textwrap.dedent(src_text)
+    tree = ast.parse(txt)
+    transform = TransformForVisitor("foo")
+    transform.visit(tree)
+    src = astor.to_source(tree)
+    src += f"{__test_func.__name__}()\n"
+    code = compile(src, "<ast>", "exec")
+    exec(code, {"foo": foo})
+    assert foo.value == 10

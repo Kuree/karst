@@ -122,8 +122,8 @@ def define_line_buffer(depth_, rows_):
         read_addr = lb_model.Variable("read_addr", 16, 0)
         write_addr = lb_model.Variable("write_addr", 16, 0)
 
-        lb_model.Constant("depth", depth)
-        lb_model.Constant("num_row", rows)
+        lb_model.Configurable("depth", 16, depth)
+        lb_model.Configurable("num_rows", 16, rows)
 
         @lb_model.action(en_port_name="wen")
         def enqueue():
@@ -131,8 +131,9 @@ def define_line_buffer(depth_, rows_):
             # state update
             lb_model.write_addr = (lb_model.write_addr + 1) % mem_size
 
-            for idx in range(rows):
-                data_outs[idx](lb_model[(lb_model.read_addr + depth * idx)
+            for idx in range(lb_model.num_rows):
+                data_outs[idx](lb_model[(lb_model.read_addr +
+                                         lb_model.depth * idx)
                                         % mem_size])
 
             if write_addr - read_addr > mem_size:

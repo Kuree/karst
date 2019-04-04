@@ -147,3 +147,13 @@ def test_assign():
     model.a = 1
     assert model.context
     assert str(model.context[0]) == "a = 1"
+
+
+def test_config():
+    model = MemoryModel(4)
+    model.Configurable("a", 4, 4)
+
+    value = 0
+    for i in range(int(model.a)):
+        value += 1
+    assert value == 4

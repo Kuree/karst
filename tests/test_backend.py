@@ -94,7 +94,7 @@ def test_fifo_memory_access():
     assert fifo.read_addr in get_var_memory_access(dequeue)
 
 
-@pytest.mark.parametrize("num_row", [1, 4])
+@pytest.mark.parametrize("num_row", [4])
 @pytest.mark.parametrize("line_size", [10, 20])
 def test_line_buffer_memory_access(num_row, line_size):
     lb = define_line_buffer(line_size, num_row)

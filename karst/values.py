@@ -209,6 +209,11 @@ class Variable(Value):
         return self.name == other.name
 
 
+class Configurable(Variable):
+    def __int__(self):
+        return self.value
+
+
 @enum.unique
 class PortType(enum.Enum):
     In = enum.auto()

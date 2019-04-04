@@ -176,7 +176,10 @@ class BasicScheduler(Scheduler):
 
     def get_total_cycle(self):
         # return the number of cycles needed to perform all the actions
+        # this is based on the memory macro we have
         r_result, w_result = self.__get_read_write_access()
+        macro = self._sram_macro
+        assert macro.partial_write, "only supports sram with partial writes"
 
 
 
