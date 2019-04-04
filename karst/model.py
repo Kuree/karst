@@ -83,6 +83,8 @@ class MemoryModel:
         # add configurable memory_size for all memory models
         self._config_vars[self.MEMORY_SIZE] = Configurable(self.MEMORY_SIZE,
                                                            16, self, size)
+        # config variables used to generate hardware
+        self._loop_vars = set()
 
         self._initialized = True
 
@@ -134,6 +136,11 @@ class MemoryModel:
 
         for _, func in self._preprocess.items():
             func()
+
+    def add_loop_var(self, *args: str):
+        for var_name in args:
+            if var_name in self._config_vars:
+                self._loop_vars.add(self[var_name])
 
     def action(self, en_port_name: str = "", rdy_port_name: str = ""):
         if self.context:
@@ -296,6 +303,9 @@ class MemoryModel:
         wrapper.__name__ = func.__name__
         return wrapper
 
+    def get_loop_vars(self):
+        return self._loop_vars.copy()
+
     # alias
     Variable = define_variable
     PortIn = define_port_in
@@ -322,9 +332,12 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     action_visitor.visit(func_tree)
     assert len(action_visitor.nodes) > 0
     # get all the marked as well
-    mark_visitor = FindMarkedFunction()
+    mark_visitor = FindMarkedFunction("mark")
     mark_visitor.visit(func_tree)
-    nodes = action_visitor.nodes + mark_visitor.nodes
+    after_config_visitor = FindLoopRangeVar("after_config", model_name)
+    after_config_visitor.visit(func_tree)
+    nodes = action_visitor.nodes + mark_visitor.nodes +\
+        after_config_visitor.nodes
     for action_node in nodes:
         # two passes
         # the first one convert all the assignment into function
@@ -338,6 +351,14 @@ def define_memory(func: Callable[["MemoryModel"], None]):
         # third pass to add int() call for every for loop
         for_transform = ForVarVisitor()
         for_transform.visit(action_node)
+
+    # let the model know which config variables are used on loop generation
+    # it's done through adding extra line to the source code
+    if after_config_visitor.range_vars:
+        node = add_model_loop_vars(model_name, after_config_visitor.range_vars,
+                                   "add_loop_var")
+        assert isinstance(func_tree.body[0].body[-1], ast.Return)
+        func_tree.body[0].body.insert(-1, node)
 
     new_src = astor.to_source(func_tree, indent_with=" " * 2)
     func_name = func.__name__

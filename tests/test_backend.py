@@ -114,6 +114,10 @@ def test_line_buffer_memory_access(num_row, line_size):
     assert pred
     if num_row > 1:
         assert space == line_size
+    # also test the loop var here
+    loop_vars = lb.get_loop_vars()
+    assert len(loop_vars) == 1
+    assert loop_vars.pop() == lb.num_rows
 
 
 def test_sram_update_states():

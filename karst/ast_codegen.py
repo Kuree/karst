@@ -122,18 +122,56 @@ class FindActionDefine(ast.NodeVisitor):
 
 
 class FindMarkedFunction(ast.NodeVisitor):
-    DECORATORS = {"mark", "after_config"}
-
-    def __init__(self):
+    def __init__(self, decorator_name):
         super().__init__()
         self.nodes = []
+        self.decorator_name = decorator_name
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         if node.decorator_list:
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Attribute):
-                    if decorator.attr in self.DECORATORS:
+                    if decorator.attr == self.decorator_name:
                         self.nodes.append(node)
+        self.generic_visit(node)
+
+
+class FindLoopRangeVar(ast.NodeVisitor):
+    def __init__(self, decorator_name, model_name):
+        super().__init__()
+        self.nodes = []
+        self.decorator_name = decorator_name
+        self.model_name = model_name
+
+        self.range_vars = []
+
+        self.__in_for = False
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        if node.decorator_list:
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Attribute):
+                    if decorator.attr == self.decorator_name:
+                        self.nodes.append(node)
+                        self.__in_for = True
+        self.generic_visit(node)
+        self.__in_for = False
+
+    def visit_For(self, node: ast.For):
+        if not self.__in_for:
+            self.generic_visit(node)
+            return
+        iter_ = node.iter
+        if isinstance(iter_, ast.Call) and isinstance(iter_.func, ast.Name) \
+                and iter_.func.id == "range":
+            # trying to see if there is any model related vars
+            # FIXME:
+            #       currently only work on range(model.var)
+            range_var = iter_.args[0]
+            if isinstance(range_var, ast.Attribute):
+                if isinstance(range_var.value, ast.Name) \
+                        and range_var.value.id == self.model_name:
+                    self.range_vars.append(range_var.attr)
         self.generic_visit(node)
 
 
@@ -149,3 +187,18 @@ class FindModelVariableName(ast.NodeVisitor):
                 self.name = n.func.value.id
                 return
         self.generic_visit(node)
+
+
+def add_model_loop_vars(model_name: str, variables, func_name):
+    args = []
+    for var in variables:
+        assert isinstance(var, str)
+        args.append(ast.Str(s=var))
+    node = ast.Call(func=ast.Attribute(value=ast.Name(id=model_name,
+                                                      ctx=ast.Load()),
+                                       attr=func_name,
+                                       cts=ast.Load()),
+                    args=args,
+                    keywords=[],
+                    ctx=ast.Load)
+    return ast.Expr(value=node)
