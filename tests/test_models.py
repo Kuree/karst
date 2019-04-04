@@ -22,8 +22,8 @@ def test_fifo():
     fifo.configure(memory_size=64, capacity=fifo_depth)
     fifo.reset()
     # try to dequeue an empty queue
-    fifo.dequeue()
     assert fifo.RDY_dequeue == 0
+    fifo.dequeue()
     fifo.data_in = 42
     fifo.enqueue()
     out = fifo.dequeue()

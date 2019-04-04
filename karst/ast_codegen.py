@@ -58,7 +58,8 @@ class ForVarVisitor(ast.NodeTransformer):
 
     def visit_For(self, node: ast.For):
         iter_ = node.iter
-        if isinstance(iter_, ast.Call) and isinstance(iter_.func, ast.Name) and iter_.func.id == "range":
+        if isinstance(iter_, ast.Call) and isinstance(iter_.func, ast.Name) \
+                and iter_.func.id == "range":
             iter_.args = [ast.Call(func=ast.Name(id="int", ctx=ast.Load()),
                                    args=iter_.args,
                                    keywords=[],
@@ -121,7 +122,7 @@ class FindActionDefine(ast.NodeVisitor):
 
 
 class FindMarkedFunction(ast.NodeVisitor):
-    DECORATORS = {"mark", "preprocess"}
+    DECORATORS = {"mark", "after_config"}
 
     def __init__(self):
         super().__init__()

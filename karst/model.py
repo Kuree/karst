@@ -285,7 +285,7 @@ class MemoryModel:
             func(*args, **kwargs)
         return wrapper
 
-    def preprocess(self, func):
+    def after_config(self, func):
         name = func.__name__
         self._preprocess[name] = func
 

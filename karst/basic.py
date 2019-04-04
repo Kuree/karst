@@ -123,9 +123,9 @@ def define_line_buffer():
         lb_model.Configurable("depth", 16)
         lb_model.Configurable("num_rows", 16)
 
-        # @preprocess will be called every time it's reconfigured
+        # @after_config will be called every time it's reconfigured
         # it's build on top of @mark
-        @lb_model.preprocess
+        @lb_model.after_config
         def create_data_out():
             data_outs.clear()
             for i in range(lb_model.num_rows):
