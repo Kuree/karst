@@ -107,6 +107,27 @@ def test_add():
     assert (1 + v1).eval() == 1 + 1
 
 
+def test_mod():
+    model = MemoryModel()
+    v1 = model.Variable("a", 4)
+    v2 = model.Variable("b", 4)
+    v1(3)
+    v2(2)
+    assert (v1 % 2).eval() == 1
+    assert (v1 % v2).eval() == 1
+
+
+def test_ge():
+    model = MemoryModel()
+    v1 = model.Variable("a", 4)
+    v2 = model.Variable("b", 4)
+    v1(3)
+    v2(2)
+    assert (v1 >= v2).eval()
+    assert (v1 >= 2).eval()
+    assert (2 <= v1).eval()
+
+
 def test_xor():
     model = MemoryModel(4)
     v1 = model.Variable("a", 4, 4)
