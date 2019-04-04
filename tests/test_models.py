@@ -70,8 +70,11 @@ def test_generic_memory():
     # just to test the interface
     @define_memory
     def define_mem():
-        mem = MemoryModel(1)
-        mem.Variable("a", 1, 0)
+        mem = MemoryModel(8)
+        a = mem.Variable("a", 2, 0)
+        mem.Constant("b", 1)
+        a_ = mem.Variable("a", 2, 0)
+        assert a == a_
 
         @mem.action(en_port_name="en", rdy_port_name="rdy")
         def test():
@@ -82,3 +85,10 @@ def test_generic_memory():
     model = define_mem()
     model.test()
     assert model.a == 1
+    assert model.b == 1
+    assert model["b"] == 1
+    model["a"] = 2
+    assert model.a == 2
+    model[model.a] = 4
+    assert model[model.a] == 4
+    assert model.get_action_names() == ["test"]
