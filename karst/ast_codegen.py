@@ -127,38 +127,27 @@ class FindMarkedFunction(ast.NodeVisitor):
         self.nodes = []
         self.decorator_name = decorator_name
 
+        self._in_marked_function = False
+
     def visit_FunctionDef(self, node: ast.FunctionDef):
         if node.decorator_list:
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Attribute):
                     if decorator.attr == self.decorator_name:
                         self.nodes.append(node)
+                        self._in_marked_function = True
         self.generic_visit(node)
+        self._in_marked_function = False
 
 
-class FindLoopRangeVar(ast.NodeVisitor):
+class FindLoopRangeVar(FindMarkedFunction):
     def __init__(self, decorator_name, model_name):
-        super().__init__()
-        self.nodes = []
-        self.decorator_name = decorator_name
+        super().__init__(decorator_name)
         self.model_name = model_name
-
         self.range_vars = []
 
-        self.__in_for = False
-
-    def visit_FunctionDef(self, node: ast.FunctionDef):
-        if node.decorator_list:
-            for decorator in node.decorator_list:
-                if isinstance(decorator, ast.Attribute):
-                    if decorator.attr == self.decorator_name:
-                        self.nodes.append(node)
-                        self.__in_for = True
-        self.generic_visit(node)
-        self.__in_for = False
-
     def visit_For(self, node: ast.For):
-        if not self.__in_for:
+        if not self._in_marked_function:
             self.generic_visit(node)
             return
         iter_ = node.iter
