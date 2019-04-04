@@ -121,6 +121,8 @@ class FindActionDefine(ast.NodeVisitor):
 
 
 class FindMarkedFunction(ast.NodeVisitor):
+    DECORATORS = {"mark", "preprocess"}
+
     def __init__(self):
         super().__init__()
         self.nodes = []
@@ -129,7 +131,7 @@ class FindMarkedFunction(ast.NodeVisitor):
         if node.decorator_list:
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Attribute):
-                    if decorator.attr == "mark":
+                    if decorator.attr in self.DECORATORS:
                         self.nodes.append(node)
         self.generic_visit(node)
 
@@ -142,5 +144,7 @@ class FindModelVariableName(ast.NodeVisitor):
     def visit_FunctionDef(self, node: ast.FunctionDef):
         if not self.name and node.decorator_list:
             n = node.decorator_list[0]
-            self.name = n.func.value.id
+            if isinstance(n, ast.Call):
+                self.name = n.func.value.id
+                return
         self.generic_visit(node)

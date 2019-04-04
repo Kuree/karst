@@ -3,7 +3,8 @@ from karst.model import MemoryModel, define_memory
 
 
 def test_sram():
-    sram = define_sram(64)
+    sram = define_sram()
+    sram.configure(memory_size=64)
     sram.reset()
     # inputs
     sram.data_in = 42
@@ -17,7 +18,8 @@ def test_sram():
 
 def test_fifo():
     fifo_depth = 8
-    fifo = define_fifo(fifo_depth)
+    fifo = define_fifo()
+    fifo.configure(memory_size=64, capacity=fifo_depth)
     fifo.reset()
     # try to dequeue an empty queue
     fifo.dequeue()
@@ -50,7 +52,8 @@ def test_fifo():
 
 
 def test_line_buffer():
-    lb = define_line_buffer(2, 2)
+    lb = define_line_buffer()
+    lb.configure(memory_size=64, num_rows=2, depth=2)
     lb.reset()
     lb.data_in = 42
     lb.enqueue()

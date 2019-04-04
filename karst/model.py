@@ -8,12 +8,19 @@ import textwrap
 
 class Memory:
     def __init__(self, size: int, parent):
+        assert size != 0 and ((size & (size - 1)) == 0), \
+            f"{size} has to be 2's power"
         self._data = [0 for _ in range(size)]
         self.parent = parent
 
     def __getitem__(self, item: Value) -> "MemoryAccess":
         assert isinstance(item, Value)
         return self.MemoryAccess(self, item, self.parent)
+
+    def resize(self, new_size: int):
+        assert new_size != 0 and ((new_size & (new_size - 1)) == 0),\
+            f"{new_size} has to be 2's power"
+        self._data = [0 for _ in range(new_size)]
 
     @enum.unique
     class MemoryAccessType(enum.Enum):
@@ -53,24 +60,29 @@ class Memory:
 
 
 class MemoryModel:
-    def __init__(self, size: int):
-        assert size != 0 and ((size & (size - 1)) == 0),\
-            f"{size} has to be 2's power"
+    MEMORY_SIZE = "memory_size"
+
+    def __init__(self, size: int = 1):
         self._initialized = False
         self._variables = {}
         self._ports = {}
         self._consts = {}
         self._config_vars = {}
 
+        self._preprocess = {}
+
         self._actions = {}
         self._conditions = {}
         self._mem = Memory(size, self)
-        self.mem_size = size
 
         self._stmts = {}
         self._global_stmts = []
 
         self.context = []
+
+        # add configurable memory_size for all memory models
+        self._config_vars[self.MEMORY_SIZE] = Configurable(self.MEMORY_SIZE,
+                                                           16, self, size)
 
         self._initialized = True
 
@@ -107,11 +119,21 @@ class MemoryModel:
 
     def define_config(self, name: str, bit_width: int,
                       value: int = 0) -> Configurable:
+        assert name != self.MEMORY_SIZE, f"{self.MEMORY_SIZE} is reserved"
         if name in self._config_vars:
             return self._config_vars[name]
         config = Configurable(name, bit_width, self, value)
         self._config_vars[name] = config
         return config
+
+    def configure(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == self.MEMORY_SIZE:
+                self._mem.resize(value)
+            self._config_vars[key].value = value
+
+        for _, func in self._preprocess.items():
+            func()
 
     def action(self, en_port_name: str = "", rdy_port_name: str = ""):
         if self.context:
@@ -163,7 +185,8 @@ class MemoryModel:
             variable(value)
 
     def __contains__(self, item):
-        return item in self._variables or item in self._ports
+        return item in self._variables or item in self._ports or \
+               item in self._config_vars
 
     def define_if(self, predicate: Union[Expression, bool], expr: Expression):
         if_ = If(self)
@@ -261,6 +284,10 @@ class MemoryModel:
         def wrapper(*args, **kwargs):
             func(*args, **kwargs)
         return wrapper
+
+    def preprocess(self, func):
+        name = func.__name__
+        self._preprocess[name] = func
 
     @classmethod
     def async_reset(cls, func):

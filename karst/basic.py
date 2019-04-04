@@ -1,11 +1,11 @@
 from karst.model import define_memory, MemoryModel
 
 
-def define_sram(size_):
+def define_sram():
     @define_memory
-    def sram(size: int):
+    def sram():
         """Models the functional behavior of an one-output sram"""
-        sram_model = MemoryModel(size)
+        sram_model = MemoryModel()
         # define ports here
         sram_model.PortIn("ren", 1)
         sram_model.PortOut("data_out", 16)
@@ -32,13 +32,13 @@ def define_sram(size_):
 
         return sram_model
 
-    return sram(size_)
+    return sram()
 
 
-def define_fifo(size_):
+def define_fifo():
     @define_memory
-    def fifo(size, delay_threshold: int = 0):
-        fifo_model = MemoryModel(size)
+    def fifo(delay_threshold: int = 0):
+        fifo_model = MemoryModel()
         # define ports here
         fifo_model.PortOut("data_out", 16)
         fifo_model.PortIn("data_in", 16)
@@ -59,14 +59,16 @@ def define_fifo(size_):
         fifo_model.almost_full = fifo_model.RDY_enqueue ^ 1
         fifo_model.almost_empty = fifo_model.RDY_dequeue ^ 1
 
-        # some other constants
-        fifo_model.Constant("almost_t", delay_threshold)
+        # configurable used to define the functional model
+        fifo_model.Configurable("almost_t", 16, delay_threshold)
+        fifo_model.Configurable("capacity", 16)
 
         @fifo_model.action()
         def enqueue():
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
             # state update
-            fifo_model.write_addr = (fifo_model.write_addr + 1) % size
+            fifo_model.write_addr = (fifo_model.write_addr + 1
+                                     ) % fifo_model.memory_size
 
             # notice that we can make function calls here as long as it's
             # marked with model.mark
@@ -77,7 +79,8 @@ def define_fifo(size_):
         def dequeue():
             fifo_model.data_out = fifo_model[fifo_model.read_addr]
             # state update
-            fifo_model.read_addr = (fifo_model.read_addr + 1) % size
+            fifo_model.read_addr = (fifo_model.read_addr +
+                                    1) % fifo_model.memory_size
 
             update_state()
 
@@ -96,23 +99,18 @@ def define_fifo(size_):
             fifo_model.RDY_dequeue = (write_addr - read_addr) > \
                                      fifo_model.almost_t
             fifo_model.RDY_enqueue = (write_addr - read_addr) < \
-                                     (size - fifo_model.almost_t)
+                                     (fifo_model.capacity - fifo_model.almost_t)
 
         return fifo_model
-    return fifo(size_)
+    return fifo()
 
 
-def define_line_buffer(depth_, rows_):
+def define_line_buffer():
     @define_memory
-    def line_buffer(depth: int, rows: int, mem_size: int = 0):
-        if mem_size == 0:
-            # get the minimal size
-            mem_size = 1 << (depth * rows-1).bit_length()
-        lb_model = MemoryModel(mem_size)
+    def line_buffer():
+        lb_model = MemoryModel()
 
         data_outs = []
-        for i in range(rows):
-            data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
 
         lb_model.PortIn("data_in", 16)
         lb_model.PortIn("wen", 1)
@@ -122,22 +120,32 @@ def define_line_buffer(depth_, rows_):
         read_addr = lb_model.Variable("read_addr", 16, 0)
         write_addr = lb_model.Variable("write_addr", 16, 0)
 
-        lb_model.Configurable("depth", 16, depth)
-        lb_model.Configurable("num_rows", 16, rows)
+        lb_model.Configurable("depth", 16)
+        lb_model.Configurable("num_rows", 16)
+
+        # @preprocess will be called every time it's reconfigured
+        # it's build on top of @mark
+        @lb_model.preprocess
+        def create_data_out():
+            data_outs.clear()
+            for i in range(lb_model.num_rows):
+                data_outs.append(lb_model.PortOut(f"data_out_{i}", 16))
 
         @lb_model.action(en_port_name="wen")
         def enqueue():
             lb_model[lb_model.write_addr] = lb_model.data_in
             # state update
-            lb_model.write_addr = (lb_model.write_addr + 1) % mem_size
+            lb_model.write_addr = (lb_model.write_addr
+                                   + 1) % lb_model.memory_size
 
             for idx in range(lb_model.num_rows):
-                data_outs[idx](lb_model[(lb_model.read_addr +
-                                         lb_model.depth * idx)
-                                        % mem_size])
+                lb_model[f"data_out_{idx}"] = lb_model[(lb_model.read_addr +
+                                                        lb_model.depth * idx)
+                                                       % lb_model.memory_size]
 
-            if write_addr - read_addr > mem_size:
-                lb_model.read_addr = (lb_model.read_addr + 1) % mem_size
+            if write_addr - read_addr > lb_model.memory_size:
+                lb_model.read_addr = (lb_model.read_addr
+                                      + 1) % lb_model.memory_size
 
             return data_outs
 
@@ -150,4 +158,4 @@ def define_line_buffer(depth_, rows_):
             lb_model.RDY_enqueue = 1
 
         return lb_model
-    return line_buffer(depth_, rows_)
+    return line_buffer()
