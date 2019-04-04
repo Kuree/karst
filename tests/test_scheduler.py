@@ -42,7 +42,7 @@ def test_basic_scheduler_lb(num_ports):
     num_row = 4
     line_depth = 4
     lb = define_line_buffer()
-    lb.configure(memory_size=1, num_rows=num_row, depth=line_depth)
+    lb.configure(memory_size=16, num_rows=num_row, depth=line_depth)
     sram_macro = SRAMMacro(1 << 4, 1 << 4, num_ports=num_ports)
     scheduler = BasicScheduler(lb, sram_macro)
     assert len(scheduler.update_spacing) == 2

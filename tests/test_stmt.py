@@ -38,4 +38,3 @@ def test_return_eq():
 
     assert not r_1.eq(r_2)
     assert r_1.eq(r_3)
-

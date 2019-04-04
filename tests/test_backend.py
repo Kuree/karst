@@ -136,6 +136,7 @@ def test_sram_update_states():
 
 def test_fifo_update_states():
     fifo = define_fifo()
+    fifo.configure(memory_size=4, capacity=4)
     statements = fifo.produce_statements()
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)
@@ -159,7 +160,7 @@ def test_lb_update_states():
     num_row = 4
     line_size = 10
     lb = define_line_buffer()
-    lb.configure(memory_size=1, num_rows=num_row, depth=line_size)
+    lb.configure(memory_size=64, num_rows=num_row, depth=line_size)
     statements = lb.produce_statements()
     stmts = statements["enqueue"]
     updates = get_state_updates(stmts)
