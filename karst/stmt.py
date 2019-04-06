@@ -7,11 +7,11 @@ class If(Statement):
         super().__init__(parent)
         # an if must have predicate, expression, and else expression
         # else expression can be empty
-        self.predicate: Expression = None
-        self.expressions: List[Expression] = []
-        self.else_expressions: List[Expression] = []
+        self.predicate: Expression
+        self.expressions: List[Statement] = []
+        self.else_expressions: List[Statement] = []
 
-    def __call__(self, predicate: Union[Expression, bool], *args: Expression):
+    def __call__(self, predicate: Union[Statement, bool], *args: Expression):
         if isinstance(predicate, bool):
             self.predicate = Const(predicate)
         else:

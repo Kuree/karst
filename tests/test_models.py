@@ -92,3 +92,5 @@ def test_generic_memory():
     model[model.a] = 4
     assert model[model.a] == 4
     assert model.get_action_names() == ["test"]
+
+    assert model.model_name == "mem"

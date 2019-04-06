@@ -191,3 +191,12 @@ def add_model_loop_vars(model_name: str, variables, func_name):
                     keywords=[],
                     ctx=ast.Load)
     return ast.Expr(value=node)
+
+
+def add_model_name(model_name: str):
+    node = ast.Assign(targets=[ast.Attribute(value=ast.Name(id=model_name,
+                                                            ctx=ast.Load()),
+                                             attr="model_name",
+                                             cts=ast.Load())],
+                      value=ast.Str(s=model_name))
+    return ast.Expr(value=node)

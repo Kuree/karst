@@ -1,6 +1,6 @@
 import inspect
 from karst.stmt import *
-from typing import Callable
+from typing import Callable, Dict
 from karst.ast_codegen import *
 import astor
 import textwrap
@@ -83,10 +83,22 @@ class MemoryModel:
         # add configurable memory_size for all memory models
         self._config_vars[self.MEMORY_SIZE] = Configurable(self.MEMORY_SIZE,
                                                            16, self, size)
+
+        # other meta info useful for code-gen
         # config variables used to generate hardware
         self._loop_vars = set()
+        self.model_name = ""
 
         self._initialized = True
+
+    def get_variables(self) -> Dict[str, Variable]:
+        return self._variables
+
+    def get_ports(self) -> Dict[str, Variable]:
+        return self._ports
+
+    def get_global_stmts(self) -> List[Statement]:
+        return self._global_stmts
 
     def define_variable(self, name: str, bit_width: int,
                         value: int = 0) -> Variable:
@@ -359,6 +371,10 @@ def define_memory(func: Callable[["MemoryModel"], None]):
                                    "add_loop_var")
         assert isinstance(func_tree.body[0].body[-1], ast.Return)
         func_tree.body[0].body.insert(-1, node)
+
+    # insert name to the model
+    node = add_model_name(model_name)
+    func_tree.body[0].body.insert(-1, node)
 
     new_src = astor.to_source(func_tree, indent_with=" " * 2)
     func_name = func.__name__

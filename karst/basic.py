@@ -42,7 +42,6 @@ def define_fifo():
         # define ports here
         fifo_model.PortOut("data_out", 16)
         fifo_model.PortIn("data_in", 16)
-        fifo_model.PortIn("reset", 1)
         fifo_model.PortOut("almost_empty", 1)
         fifo_model.PortOut("almost_full", 1)
 
@@ -114,7 +113,6 @@ def define_line_buffer():
 
         lb_model.PortIn("data_in", 16)
         lb_model.PortIn("wen", 1)
-        lb_model.PortIn("reset", 1)
 
         # state control variables
         read_addr = lb_model.Variable("read_addr", 16, 0)

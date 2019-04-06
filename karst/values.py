@@ -150,6 +150,13 @@ class Value:
             value = other
         return Expression(self, value, operator.xor)
 
+    ops = {operator.eq: "==", operator.add: "+",
+           operator.sub: "-", operator.mul: "*",
+           operator.mod: "%", operator.gt: ">",
+           operator.ge: ">=", operator.lt: "<",
+           operator.le: "<=", operator.rshift: ">>",
+           operator.lshift: "<<", operator.xor: "^"}
+
 
 class AssignStatement(Statement):
     def __init__(self, left: "Variable", right: Value, parent):
