@@ -51,7 +51,7 @@ class CppCodeGen(CodeGen):
 
     def _code_gen_actions(self, indent_num: int,
                           use_global_eval: bool = False) -> str:
-        indent = self.__get_indent(indent_num)
+        indent = self._get_indent(indent_num)
         endl = os.linesep
         s = ""
 
@@ -63,18 +63,18 @@ class CppCodeGen(CodeGen):
             for stmt in stmts:
                 s += self._code_gen_stmts(stmt, indent_num + 1)
             if use_global_eval:
-                indent_ = self.__get_indent(indent_num + 1)
+                indent_ = self._get_indent(indent_num + 1)
                 s += f"{endl}{indent_}{self.GLOBAL_EVAL_FUNC_NAME}();{endl}"
             s += f"{indent}}}{endl}{endl}"
 
         return s
 
     @classmethod
-    def __get_indent(cls, indent_num):
+    def _get_indent(cls, indent_num):
         return indent_num * cls.CPP_INDENT
 
     def _code_gen_global_stmts(self, indent_num: int) -> str:
-        indent = self.__get_indent(indent_num)
+        indent = self._get_indent(indent_num)
         endl = os.linesep
         s = ""
 
@@ -87,7 +87,7 @@ class CppCodeGen(CodeGen):
 
     @classmethod
     def _code_gen_stmts(cls, stmt: Statement, indent_num: int) -> str:
-        indent = cls.__get_indent(indent_num)
+        indent = cls._get_indent(indent_num)
         endl = os.linesep
         s = ""
         if isinstance(stmt, If):
@@ -97,9 +97,8 @@ class CppCodeGen(CodeGen):
             # easily. maybe tuple? need to double check with HLS
             pass
         elif isinstance(stmt, AssignStatement):
-            left = cls._code_gen_expr(stmt.left)
-            right = cls._code_gen_expr(stmt.right)
-            s += f"{indent}{left} = {right};{endl}"
+            content = cls._code_gen_assign(stmt, eq="=")
+            s += f"{indent}{content};{endl}"
         else:
             raise NotImplemented(stmt)
         return s
@@ -116,24 +115,6 @@ class CppCodeGen(CodeGen):
             for stmt_ in stmt.else_expressions:
                 s += cls._code_gen_stmts(stmt_, indent_num + 1)
         s += f"{indent}}}{endl}"
-        return s
-
-    def _code_gen_variables(self, indent_num: int):
-        indent = self.__get_indent(indent_num)
-        endl = os.linesep
-        s = ""
-
-        variables = self._model.get_variables().copy()
-        variables.update(self._model.get_ports().copy())
-        used_vars = set()
-
-        for var_name in variables:
-            var = variables[var_name]
-            if var.name in used_vars:
-                continue
-            else:
-                used_vars.add(var.name)
-            s += f"{indent}{self._code_gen_var(var)};{endl}"
         return s
 
     @classmethod

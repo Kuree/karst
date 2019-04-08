@@ -1,6 +1,7 @@
 from karst.stmt import *
 from karst.model import MemoryModel, Memory
 import abc
+import os
 
 
 class CodeGen:
@@ -50,3 +51,32 @@ class CodeGen:
     @abc.abstractmethod
     def _code_gen_mem_access(cls, mem_access: Memory.MemoryAccess) -> str:
         """return memory access code"""
+
+    @classmethod
+    def _code_gen_assign(cls, stmt: AssignStatement, eq: str = "="):
+        left = cls._code_gen_expr(stmt.left)
+        right = cls._code_gen_expr(stmt.right)
+        return f"{left} {eq} {right}"
+
+    @classmethod
+    @abc.abstractmethod
+    def _get_indent(cls, indent_num) -> str:
+        """return indentation"""
+
+    def _code_gen_variables(self, indent_num: int):
+        indent = self._get_indent(indent_num)
+        endl = os.linesep
+        s = ""
+
+        variables = self._model.get_variables().copy()
+        variables.update(self._model.get_ports().copy())
+        used_vars = set()
+
+        for var_name in variables:
+            var = variables[var_name]
+            if var.name in used_vars:
+                continue
+            else:
+                used_vars.add(var.name)
+            s += f"{indent}{self._code_gen_var(var)};{endl}"
+        return s

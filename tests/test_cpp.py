@@ -1,4 +1,4 @@
-from karst.hls import *
+from karst.cpp import *
 from karst.basic import *
 import tempfile
 import subprocess
