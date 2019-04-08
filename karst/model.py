@@ -1,7 +1,7 @@
 import inspect
 from karst.stmt import *
 from typing import Callable, Dict
-from karst.ast_codegen import *
+from karst.pyast import *
 import astor
 import textwrap
 

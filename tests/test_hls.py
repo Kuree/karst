@@ -1,4 +1,4 @@
-from karst.cpp_codegen import *
+from karst.hls import *
 from karst.basic import *
 import tempfile
 import subprocess

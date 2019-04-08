@@ -1,4 +1,4 @@
-from karst.ast_codegen import *
+from karst.pyast import *
 import astor
 import inspect
 import textwrap

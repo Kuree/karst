@@ -1,15 +1,16 @@
 from karst.stmt import *
 from karst.model import MemoryModel, Memory
+from karst.codegen import CodeGen
 import os
 
 
-class CppCodeGen:
+class CppCodeGen(CodeGen):
     CPP_INDENT = 4 * " "
     MEMORY_NAME = "mem"
     GLOBAL_EVAL_FUNC_NAME = "global_eval"
 
     def __init__(self, model: MemoryModel):
-        self._model = model
+        super().__init__(model)
 
     def code_gen(self) -> str:
         # return a string
@@ -90,15 +91,7 @@ class CppCodeGen:
         endl = os.linesep
         s = ""
         if isinstance(stmt, If):
-            predicate = cls._code_gen_expr(stmt.predicate)
-            s += f"{indent}if ({predicate}) {{{endl}"
-            for stmt_ in stmt.expressions:
-                s += cls._code_gen_stmts(stmt_, indent_num + 1)
-            if stmt.else_expressions:
-                s += f"{indent}}} else {{{endl}"
-                for stmt_ in stmt.else_expressions:
-                    s += cls._code_gen_stmts(stmt_, indent_num + 1)
-            s += f"{indent}}}{endl}"
+            s += cls._code_gen_if(endl, indent, indent_num, stmt)
         elif isinstance(stmt, ReturnStatement):
             # we don't return in C++ code as we can't return a list of stuff
             # easily. maybe tuple? need to double check with HLS
@@ -112,36 +105,18 @@ class CppCodeGen:
         return s
 
     @classmethod
-    def _code_gen_expr(cls, expr: Union[Expression,
-                                        Value,
-                                        int]) -> str:
-        if isinstance(expr, Expression):
-            left = cls._code_gen_expr(expr.left)
-            right = cls._code_gen_expr(expr.right)
-            use_parentheses_left = isinstance(expr.left, Expression)
-            use_parentheses_right = isinstance(expr.right, Expression)
-            if use_parentheses_left:
-                left = f"({left})"
-            if use_parentheses_right:
-                right = f"({right})"
-            op = Value.ops[expr.op]
-            return f"{left} {op} {right}"
-        elif isinstance(expr, Memory.MemoryAccess):
-            var = cls._code_gen_expr(expr.var)
-            return f"{cls.MEMORY_NAME}[{var}]"
-        elif isinstance(expr, Value):
-            return cls._code_gen_var(expr)
-        else:
-            assert isinstance(expr, int)
-            return str(expr)
-
-    @classmethod
-    def _code_gen_var(cls, var: Value) -> str:
-        if isinstance(var, (Const, Configurable)):
-            return var.eval()
-        else:
-            assert isinstance(var, Value)
-            return var.name
+    def _code_gen_if(cls, endl, indent, indent_num, stmt):
+        s = ""
+        predicate = cls._code_gen_expr(stmt.predicate)
+        s += f"{indent}if ({predicate}) {{{endl}"
+        for stmt_ in stmt.expressions:
+            s += cls._code_gen_stmts(stmt_, indent_num + 1)
+        if stmt.else_expressions:
+            s += f"{indent}}} else {{{endl}"
+            for stmt_ in stmt.else_expressions:
+                s += cls._code_gen_stmts(stmt_, indent_num + 1)
+        s += f"{indent}}}{endl}"
+        return s
 
     def _code_gen_variables(self, indent_num: int):
         indent = self.__get_indent(indent_num)
@@ -150,14 +125,28 @@ class CppCodeGen:
 
         variables = self._model.get_variables().copy()
         variables.update(self._model.get_ports().copy())
+        used_vars = set()
 
         for var_name in variables:
             var = variables[var_name]
-            if var.bit_width == 1:
-                s += f"{indent}bool {var_name};{endl}"
+            if var.name in used_vars:
+                continue
             else:
-                s += f"{indent}unsigned int {var_name};{endl}"
+                used_vars.add(var.name)
+            s += f"{indent}{self._code_gen_var(var)};{endl}"
         return s
+
+    @classmethod
+    def _code_gen_var(cls, var: Variable) -> str:
+        if var.bit_width == 1:
+            return f"bool {var.name}"
+        else:
+            return f"unsigned int {var.name}"
+
+    @classmethod
+    def _code_gen_mem_access(cls, mem_access: Memory.MemoryAccess) -> str:
+        var = cls._code_gen_expr(mem_access.var)
+        return f"{cls.MEMORY_NAME}[{var}]"
 
     def code_gen_to_file(self, filename: str):
         with open(filename, "w+") as f:
