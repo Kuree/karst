@@ -72,7 +72,6 @@ class MemoryModel:
         self._preprocess = {}
 
         self._actions = {}
-        self._conditions = {}
         self._mem = Memory(size, self)
 
         self._stmts = {}
@@ -99,6 +98,9 @@ class MemoryModel:
 
     def get_global_stmts(self) -> List[Statement]:
         return self._global_stmts
+
+    def get_config_vars(self):
+        return self._config_vars
 
     def define_variable(self, name: str, bit_width: int,
                         value: int = 0) -> Variable:
@@ -237,13 +239,13 @@ class MemoryModel:
                 self.model._ports[f"EN_{self.name}"] = \
                     self.model[en_port_name]
             else:
-                self.model.Variable(f"EN_{self.name}", 1)
+                self.model.PortIn(f"EN_{self.name}", 1)
             if rdy_port_name in self.model:
                 # port aliasing
                 self.model._ports[f"RDY_{self.name}"] = \
                     self.model[rdy_port_name]
             else:
-                self.model.Variable(f"RDY_{self.name}", 1)
+                self.model.PortOut(f"RDY_{self.name}", 1)
 
             def wrapper():
                 # we need to record every expressions here

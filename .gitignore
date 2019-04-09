@@ -103,3 +103,6 @@ env3.6
 
 # mypy
 .mypy_cache/
+
+# catapult files
+ac_int.h
