@@ -17,7 +17,7 @@ def test_sram_codegen():
     sram.configure(memory_size=128)
 
     codegen = CatapultCodeGen(sram)
-    s = codegen.code_gen()
+    codegen.code_gen()
     tester = CatapultTester(codegen)
     tester.test()
 

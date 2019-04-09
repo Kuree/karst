@@ -132,13 +132,11 @@ class CatapultCodeGen(CppCodeGen):
                 for var_ in statement.values:
                     result_.append(var_)
                 return result_
-            elif isinstance(statement, AssignStatement):
+            else:
+                assert isinstance(statement, AssignStatement)
                 left_var = get_port_var(statement.left)
                 right_var = get_port_var(statement.right)
                 return left_var + right_var
-            else:
-                assert isinstance(statement, Expression)
-                return get_port_var(statement)
 
         result = set()
         for stmt in stmts:
