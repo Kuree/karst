@@ -1,4 +1,4 @@
-from karst.basic import define_sram, define_fifo, define_line_buffer
+from karst.basic import define_sram, define_fifo, define_line_buffer, define_double_buffer
 from karst.model import MemoryModel, define_memory
 
 
@@ -101,3 +101,52 @@ def test_generic_memory():
     assert model.get_action_names() == ["test"]
 
     assert model.model_name == "mem"
+
+
+
+def test_double_buffer():
+    db = define_double_buffer()
+    db.configure(
+    memory_size=65536, 
+    dimensionality=3, 
+    size_dim_0=3, 
+    size_dim_1=3, 
+    size_dim_2=3,
+    size_dim_3=0,
+    size_dim_4=0,
+    size_dim_5=0,
+    size_dim_6=0,
+    size_dim_7=0,
+    stride_dim_0=1, 
+    stride_dim_1=1, 
+    stride_dim_2=1, 
+    stride_dim_3=0,
+    stride_dim_4=0,
+    stride_dim_5=0, 
+    stride_dim_6=0, 
+    stride_dim_7=0,    
+    order_dim_0=1, 
+    order_dim_1=0, 
+    order_dim_2=2, 
+    order_dim_3=0,
+    order_dim_4=0,
+    order_dim_5=0, 
+    order_dim_6=0, 
+    order_dim_7=0)
+
+    db.reset()
+    #db.switch = 0
+    #db.data_in = 0
+    #db.write_buff()
+
+
+    for i in range(27):
+        db.data_in = i
+        db.write_buff()
+
+    # db.switch_buff()
+
+    # output_nums = []
+    # for i in range(27):
+    #     output_nums.append(db.read_buff())
+    #     print(str(output_nums[i]))
