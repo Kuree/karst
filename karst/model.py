@@ -378,7 +378,9 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     node = add_model_name(model_name)
     func_tree.body[0].body.insert(-1, node)
 
-    new_src = astor.to_source(func_tree, indent_with=" " * 2)
+    # formatting
+    new_src = astor.to_source(func_tree, indent_with=" " * 2,
+                              pretty_string=pretty_string)
     func_name = func.__name__
     code_obj = compile(new_src, "<ast>", "exec")
     exec(code_obj, globals(), locals())

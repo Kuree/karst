@@ -50,8 +50,9 @@ class CatapultCodeGen(CppCodeGen):
             var = config_vars[var_name]
             # no aliasing here
             assert var.name == var_name
-            configs.append(self._code_gen_var(var, False,
-                                              in_func_signature=True))
+            configs.append(self._code_gen_var(var, use_ac_int=False,
+                                              in_func_signature=True,
+                                              use_reference=False))
         config_str = ", ".join(configs)
         return f"template<class {template_class}{config_str}>"
 

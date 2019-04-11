@@ -7,7 +7,6 @@ def test_fifo_codegen():
     fifo.configure(memory_size=128, capacity=64)
 
     codegen = CatapultCodeGen(fifo)
-    codegen.code_gen()
     tester = CatapultTester(codegen)
     tester.test()
 
@@ -17,7 +16,6 @@ def test_sram_codegen():
     sram.configure(memory_size=128)
 
     codegen = CatapultCodeGen(sram)
-    codegen.code_gen()
     tester = CatapultTester(codegen)
     tester.test()
 
@@ -27,6 +25,5 @@ def test_lb_codegen():
     lb.configure(memory_size=128, num_rows=2, depth=64)
 
     codegen = CatapultCodeGen(lb)
-    codegen.code_gen()
     tester = CatapultTester(codegen)
     tester.test()

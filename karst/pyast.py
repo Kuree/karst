@@ -200,3 +200,28 @@ def add_model_name(model_name: str):
                                              cts=ast.Load())],
                       value=ast.Str(s=model_name))
     return ast.Expr(value=node)
+
+
+def pretty_string(s, embedded, current_line, uni_lit=False,
+                  min_trip_str=20, max_line=100):
+    """don't care version of pretty_string
+    """
+
+    default = repr(s)
+    len_s = len(default)
+
+    if current_line.strip():
+        second_line_start = s.find('\n') + 1
+        if embedded > 1 and not second_line_start:
+            return default
+
+        if len_s < min_trip_str:
+            return default
+
+        # Could be on a line by itself...
+        if embedded and not second_line_start:
+            return default
+
+        return default
+
+    return default
