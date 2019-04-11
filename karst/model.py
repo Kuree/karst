@@ -353,18 +353,21 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     nodes = action_visitor.nodes + mark_visitor.nodes +\
         after_config_visitor.nodes
     for action_node in nodes:
-        # two passes
-        # the first one convert all the assignment into function
+        # multiple passes
+        # 1. convert all the assignment into function
         assign_visitor = AssignNodeVisitor()
         action_node = assign_visitor.visit(action_node)
         ast.fix_missing_locations(action_node)
-        # second pass to convert if statement
+        # 2. convert if statement
         if_visitor = IfNodeVisitor(model_name)
         if_visitor.visit(action_node)
         ast.fix_missing_locations(action_node)
-        # third pass to add int() call for every for loop
+        # 3. add int() call for every for loop
         for_transform = ForVarVisitor()
         for_transform.visit(action_node)
+        # 4. add eval to list index
+        index_transform = ListIndex(model_name)
+        index_transform.visit(action_node)
 
     # let the model know which config variables are used on loop generation
     # it's done through adding extra line to the source code

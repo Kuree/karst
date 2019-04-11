@@ -178,6 +178,26 @@ class FindModelVariableName(ast.NodeVisitor):
         self.generic_visit(node)
 
 
+class ListIndex(ast.NodeTransformer):
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def visit_Subscript(self, node: ast.Subscript):
+        value = node.value
+        slice_ = node.slice
+        if isinstance(value, ast.Name) and value.id == self.model_name:
+            return node
+        else:
+            assert isinstance(slice_, ast.Index), "only index object supported"
+            # turn the slice into a int eval
+            slice_ = ast.Index(value=ast.Call(func=ast.Name(id="int",
+                                                            ctx=ast.Load()),
+                                              args=[slice_.value],
+                                              keywords=[],
+                                              ctx=ast.Load()))
+            return ast.Subscript(value=value, slice=slice_, ctx=ast.Load())
+
+
 def add_model_loop_vars(model_name: str, variables, func_name):
     args = []
     for var in variables:

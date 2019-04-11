@@ -97,3 +97,33 @@ def test_for_statement():
     code = compile(src, "<ast>", "exec")
     exec(code, {"foo": foo})
     assert foo.value == 10
+
+
+def test_index_statement():
+    lst = [1, 2]
+
+    class Foo:
+        def __init__(self):
+            self.value = 0
+
+        def __setitem__(self, key, value):
+            self.value = key + value
+
+    foo = Foo()
+
+    def __test_func():
+        lst["0"] = 42
+        foo[1] = 2
+
+    src_text = inspect.getsource(__test_func)
+    txt = textwrap.dedent(src_text)
+    tree = ast.parse(txt)
+    transform = ListIndex("foo")
+    transform.visit(tree)
+    src = astor.to_source(tree)
+    src += f"{__test_func.__name__}()\n"
+    code = compile(src, "<ast>", "exec")
+    exec(code, {"foo": foo, "lst": lst})
+    assert lst[0] == 42
+    assert lst[1] == 2
+    assert foo.value == 3
