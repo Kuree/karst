@@ -66,7 +66,7 @@ def test_if_else_transform():
     src_text = inspect.getsource(__test_func)
     txt = textwrap.dedent(src_text)
     tree = ast.parse(txt)
-    if_ = IfNodeVisitor("foo")
+    if_ = IfNodeVisitor("foo", predicate_model_name=False)
     if_.visit(tree)
     src = astor.to_source(tree)
     src += f"{__test_func.__name__}()\n"

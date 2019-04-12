@@ -8,10 +8,10 @@ class HasModelVariable(ast.NodeVisitor):
         self.model_name = model_name
         self.has_model_var = False
 
-    def visit_Attribute(self, node: ast.Attribute):
-        if isinstance(node.value, ast.Name) and \
-                node.value.id == self.model_name:
+    def visit_Name(self, node: ast.Name):
+        if node.id == self.model_name:
             self.has_model_var = True
+        self.generic_visit(node)
 
 
 class AssignNodeVisitor(ast.NodeTransformer):
@@ -31,12 +31,20 @@ class AssignNodeVisitor(ast.NodeTransformer):
 
 
 class IfNodeVisitor(ast.NodeTransformer):
-    def __init__(self, model_variable_name: str):
+    def __init__(self, model_variable_name: str,
+                 predicate_model_name: bool = True):
         super().__init__()
         self.model_name = model_variable_name
+        self.predicate_model_name = predicate_model_name
 
     def visit_If(self, node: ast.If):
         predicate = node.test
+        # we only replace stuff if the predicate has something to do with the
+        # model
+        has_model = HasModelVariable(self.model_name)
+        has_model.visit(predicate)
+        if not has_model.has_model_var and self.predicate_model_name:
+            return node
         expression = node.body
         else_expression = node.orelse
 
@@ -239,28 +247,3 @@ def add_model_name(model_name: str):
                                              cts=ast.Load())],
                       value=ast.Str(s=model_name))
     return ast.Expr(value=node)
-
-
-def pretty_string(s, embedded, current_line, uni_lit=False,
-                  min_trip_str=20, max_line=100):
-    """don't care version of pretty_string
-    """
-
-    default = repr(s)
-    len_s = len(default)
-
-    if current_line.strip():
-        second_line_start = s.find('\n') + 1
-        if embedded > 1 and not second_line_start:
-            return default
-
-        if len_s < min_trip_str:
-            return default
-
-        # Could be on a line by itself...
-        if embedded and not second_line_start:
-            return default
-
-        return default
-
-    return default
