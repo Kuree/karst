@@ -10,18 +10,30 @@ def test_assign_transform():
             self.value = 0
 
         def __call__(self, *args, **kwargs):
-            self.value = args[0]
+            self.value = args[0] + 2
 
-    test = TestClass()
+    class Foo:
+        def __init__(self):
+            self.value = TestClass()
 
-    txt = "test = 2"
+    foo = Foo()
+    bar = Foo()
+
+    def __test_func():
+        foo.value = 2
+        bar.value = 42
+
+    src_text = inspect.getsource(__test_func)
+    txt = textwrap.dedent(src_text)
     tree = ast.parse(txt)
-    visitor = AssignNodeVisitor()
-    visitor.visit(tree)
-    ast.fix_missing_locations(tree)
+    assign = AssignNodeVisitor("foo")
+    assign.visit(tree)
     src = astor.to_source(tree)
-    eval(src)
-    assert test.value == 2
+    src += f"{__test_func.__name__}()\n"
+    code = compile(src, "<ast>", "exec")
+    exec(code, {"foo": foo, "bar": bar})
+    assert foo.value.value == 2 + 2
+    assert bar.value == 42
 
 
 def test_if_else_transform():

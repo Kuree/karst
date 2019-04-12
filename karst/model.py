@@ -373,7 +373,7 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     for action_node in nodes:
         # multiple passes
         # 1. convert all the assignment into function
-        assign_visitor = AssignNodeVisitor()
+        assign_visitor = AssignNodeVisitor(model_name)
         action_node = assign_visitor.visit(action_node)
         ast.fix_missing_locations(action_node)
         # 2. convert if statement

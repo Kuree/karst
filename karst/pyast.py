@@ -2,13 +2,32 @@ import ast
 import astor
 
 
-class AssignNodeVisitor(ast.NodeTransformer):
-    def __init__(self):
+class HasModelVariable(ast.NodeVisitor):
+    def __init__(self, model_name):
         super().__init__()
+        self.model_name = model_name
+        self.has_model_var = False
+
+    def visit_Attribute(self, node: ast.Attribute):
+        if isinstance(node.value, ast.Name) and \
+                node.value.id == self.model_name:
+            self.has_model_var = True
+
+
+class AssignNodeVisitor(ast.NodeTransformer):
+    def __init__(self, model_name):
+        super().__init__()
+        self.model_name = model_name
 
     def visit_Assign(self, node):
-        return ast.Expr(value=ast.Call(func=node.targets[0], args=[node.value],
-                                       keywords=[]))
+        has_model = HasModelVariable(self.model_name)
+        has_model.visit(node)
+        if has_model.has_model_var:
+            return ast.Expr(value=ast.Call(func=node.targets[0],
+                                           args=[node.value],
+                                           keywords=[]))
+        else:
+            return node
 
 
 class IfNodeVisitor(ast.NodeTransformer):

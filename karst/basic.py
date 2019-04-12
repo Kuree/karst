@@ -137,9 +137,9 @@ def define_line_buffer():
                                    + 1) % lb_model.memory_size
 
             for idx in range(lb_model.num_rows):
-                lb_model[f"data_out_{idx}"] = lb_model[(lb_model.read_addr +
-                                                        lb_model.depth * idx)
-                                                       % lb_model.memory_size]
+                data_outs[idx] = lb_model[(lb_model.read_addr +
+                                           lb_model.depth * idx)
+                                          % lb_model.memory_size]
 
             if write_addr - read_addr > lb_model.memory_size:
                 lb_model.read_addr = (lb_model.read_addr
