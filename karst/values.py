@@ -166,6 +166,9 @@ class Value:
             value = other
         return Expression(self, value, operator.or_)
 
+    def __iter__(self):
+        return iter(range(self.eval()))
+
     ops = {operator.eq: "==", operator.add: "+",
            operator.sub: "-", operator.mul: "*",
            operator.mod: "%", operator.gt: ">",

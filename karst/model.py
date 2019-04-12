@@ -152,6 +152,9 @@ class MemoryModel:
         for _, func in self._preprocess.items():
             func()
 
+        # clear out the action stmts so that they will be re-generated
+        self._stmts.clear()
+
     def add_loop_var(self, *args: str):
         for var_name in args:
             if var_name in self._config_vars:

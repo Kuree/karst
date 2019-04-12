@@ -194,3 +194,16 @@ def test_config():
     for i in range(int(model.a)):
         value += 1
     assert value == 4
+
+    model.configure(a=5)
+    assert model.a == 5
+
+
+def test_range():
+    model = MemoryModel(4)
+    model.Variable("a", 4, 5)
+
+    s = 0
+    for i in model.a:
+        s += i
+    assert s == 10
