@@ -150,12 +150,29 @@ class Value:
             value = other
         return Expression(self, value, operator.xor)
 
+    def __and__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
+        else:
+            value = other
+        return Expression(self, value, operator.and_)
+
+    def __or__(self, other: Union["Value", int]):
+        if not isinstance(other, Value):
+            assert isinstance(other, int)
+            value = Const(other)
+        else:
+            value = other
+        return Expression(self, value, operator.or_)
+
     ops = {operator.eq: "==", operator.add: "+",
            operator.sub: "-", operator.mul: "*",
            operator.mod: "%", operator.gt: ">",
            operator.ge: ">=", operator.lt: "<",
            operator.le: "<=", operator.rshift: ">>",
-           operator.lshift: "<<", operator.xor: "^"}
+           operator.lshift: "<<", operator.xor: "^",
+           operator.or_: "|", operator.and_: "&"}
 
 
 class AssignStatement(Statement):

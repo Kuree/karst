@@ -135,6 +135,22 @@ def test_xor():
     assert (v1 ^ v2).eval() == (v1 ^ 4).eval()
 
 
+def test_or():
+    model = MemoryModel(4)
+    v1 = model.Variable("a", 4, 1)
+    v2 = model.Variable("b", 4, 2)
+    assert (v1 | v2).eval() == (v1 | 3).eval()
+    assert (v1 | v2).eval() == 3
+
+
+def test_and():
+    model = MemoryModel(4)
+    v1 = model.Variable("a", 4, 1)
+    v2 = model.Variable("b", 4, 2)
+    assert (v1 & v2).eval() == 0
+    assert (v1 & 3).eval() == 1
+
+
 def test_const():
     model = MemoryModel(4)
     v1 = model.Variable("a", 4)
