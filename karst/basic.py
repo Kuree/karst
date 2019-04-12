@@ -196,32 +196,35 @@ def define_double_buffer():
         for i in range(8):
             db_model.Configurable(f"order_dim_{i}", 16)
 
-        for idx in range(8):
-            partial_sums[db_model[f"order_dim_{idx}"]] = \
-                out_iterators[db_model[f"order_dim_{idx}"]] * \
-                db_model[f"stride_dim_{db_model[f'order_dim_{idx}']}"]
-            update_set[idx] = out_iterators[db_model[f"order_dim_{idx}"]] \
-                & iter_update[idx]
+        @db_model.global_func
+        def eval_partial_sums():
+            for i in range(8):
+                partial_sums[db_model[f"order_dim_{i}"]] = \
+                    out_iterators[db_model[f"order_dim_{i}"]] * \
+                    db_model[f"stride_dim_{db_model[f'order_dim_{i}']}"]
+                update_set[i] = out_iterators[db_model[f"order_dim_{i}"]] \
+                    & iter_update[i]
 
         @db_model.after_config
         def create_iterators():
             out_iterators.clear()
-            for i in range(8):
-                out_iterators.append(db_model.Variable(f"iterator_{i}", 16, 0))
-                iter_update.append(db_model.Variable(f"update_{i}", 1, 1))
+            for idx in range(8):
+                out_iterators.append(db_model.Variable(f"iterator_{idx}", 16,
+                                                       0))
+                iter_update.append(db_model.Variable(f"update_{idx}", 1, 1))
 
         @db_model.action(en_port_name="switch")
         def switch_buff():
             db_model.ping_npong = db_model.ping_npong ^ 1
             db_model.write_addr = 0
             db_model.read_addr = 0
-            for i in range(8):
-                db_model[f"iterator_{i}"] = 0
+            for idx in range(8):
+                db_model[f"iterator_{idx}"] = 0
 
         @db_model.action(en_port_name="wen")
         def write_buff():
             # Make sure to go to the proper half
-            db_model[((db_model.ping_npong) << 15) +
+            db_model[(db_model.ping_npong << 15) +
                      ((db_model.write_addr << 1) >> 1)] = db_model.data_in
             # state update
             db_model.write_addr = (db_model.write_addr + 1) % \
@@ -252,9 +255,9 @@ def define_double_buffer():
                         (out_iterators[db_model[f"order_dim_{idx}"]] + 1) % \
                         db_model[f"size_dim_{orders[idx]}"]
                 if update_set[idx] == 1:
-                    iter_update[idx+1] = 1
+                    iter_update[idx + 1](1)
                 if iter_update[idx] and idx != 0:
-                    iter_updated[idx] = 0
+                    iter_update[idx](0)
 
                 # if(idx == 0):
                 #     db_model[f"iterator_{db_model[f'order_dim_{idx}']}"] =
@@ -279,11 +282,11 @@ def define_double_buffer():
             db_model.read_addr = 0
             db_model.write_addr = 0
             db_model.ping_npong = 0
-            for i in range(8):
-                db_model[f"iterator_{i}"] = 0
+            for idx in range(8):
+                db_model[f"iterator_{idx}"] = 0
             iter_update[0] = 1
-            for i in range(1, 8):
-                iter_update[i] = 0
+            for idx in range(1, 8):
+                iter_update[idx](0)
 
         return db_model
 

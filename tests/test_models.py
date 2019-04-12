@@ -103,42 +103,40 @@ def test_generic_memory():
     assert model.model_name == "mem"
 
 
-
 def test_double_buffer():
     db = define_double_buffer()
     db.configure(
-    memory_size=65536, 
-    dimensionality=3, 
-    size_dim_0=3, 
-    size_dim_1=3, 
-    size_dim_2=3,
-    size_dim_3=0,
-    size_dim_4=0,
-    size_dim_5=0,
-    size_dim_6=0,
-    size_dim_7=0,
-    stride_dim_0=1, 
-    stride_dim_1=1, 
-    stride_dim_2=1, 
-    stride_dim_3=0,
-    stride_dim_4=0,
-    stride_dim_5=0, 
-    stride_dim_6=0, 
-    stride_dim_7=0,    
-    order_dim_0=1, 
-    order_dim_1=0, 
-    order_dim_2=2, 
-    order_dim_3=0,
-    order_dim_4=0,
-    order_dim_5=0, 
-    order_dim_6=0, 
-    order_dim_7=0)
+        memory_size=65536,
+        dimensionality=3,
+        size_dim_0=3,
+        size_dim_1=3,
+        size_dim_2=3,
+        size_dim_3=0,
+        size_dim_4=0,
+        size_dim_5=0,
+        size_dim_6=0,
+        size_dim_7=0,
+        stride_dim_0=1,
+        stride_dim_1=1,
+        stride_dim_2=1,
+        stride_dim_3=0,
+        stride_dim_4=0,
+        stride_dim_5=0,
+        stride_dim_6=0,
+        stride_dim_7=0,
+        order_dim_0=1,
+        order_dim_1=0,
+        order_dim_2=2,
+        order_dim_3=0,
+        order_dim_4=0,
+        order_dim_5=0,
+        order_dim_6=0,
+        order_dim_7=0)
 
     db.reset()
     #db.switch = 0
     #db.data_in = 0
     #db.write_buff()
-
 
     for i in range(27):
         db.data_in = i
