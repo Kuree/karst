@@ -74,18 +74,25 @@ def test_generic_memory():
         a = mem.Variable("a", 2, 0)
         mem.Constant("b", 1)
         a_ = mem.Variable("a", 2, 0)
+        c_ = mem.Variable("c", 16, 0)
         assert a == a_
 
         @mem.action(en_port_name="en", rdy_port_name="rdy")
         def test():
             mem.a = 1
 
+        @mem.global_func
+        def global_test():
+            mem.c = 42
+
         return mem
 
     model = define_mem()
+    assert model.c == 0
     model.test()
     assert model.a == 1
     assert model.b == 1
+    assert model.c == 42
     assert model["b"] == 1
     model["a"] = 2
     assert model.a == 2

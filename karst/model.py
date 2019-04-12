@@ -76,6 +76,7 @@ class MemoryModel:
 
         self._stmts = {}
         self._global_stmts = []
+        self._global_funcs = {}
 
         self.context = []
 
@@ -255,6 +256,11 @@ class MemoryModel:
                 # copy to the statement
                 if v is not None:
                     self.model.Return(v)
+                # add global statements here
+                for func_name in self.model._global_funcs:
+                    func = self.model._global_funcs[func_name]
+                    func()
+
                 self.model._stmts[self.name] = self.model.context[:]
                 self.model.context.clear()
                 return v
@@ -310,6 +316,12 @@ class MemoryModel:
         name = func.__name__
         self._preprocess[name] = func
 
+    def global_func(self, func):
+        """global function evaluated at every function. cannot be called
+        separately"""
+        name = func.__name__
+        self._global_funcs[name] = func
+
     @classmethod
     def async_reset(cls, func):
         def wrapper(*args, **kwargs):
@@ -350,8 +362,11 @@ def define_memory(func: Callable[["MemoryModel"], None]):
     mark_visitor.visit(func_tree)
     after_config_visitor = FindLoopRangeVar("after_config", model_name)
     after_config_visitor.visit(func_tree)
+    # also transform the functions marked as global
+    global_visitor = FindMarkedFunction("global_func")
+    global_visitor.visit(func_tree)
     nodes = action_visitor.nodes + mark_visitor.nodes +\
-        after_config_visitor.nodes
+        after_config_visitor.nodes + global_visitor.nodes
     for action_node in nodes:
         # multiple passes
         # 1. convert all the assignment into function
