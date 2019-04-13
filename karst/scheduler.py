@@ -181,8 +181,6 @@ class BasicScheduler(Scheduler):
         macro = self._sram_macro
         assert macro.partial_write, "only supports sram with partial writes"
 
-
-
     def schedule(self):
         """The basic scheduler tries its best to schedule for minimum cycle
         delay"""

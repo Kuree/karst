@@ -147,7 +147,7 @@ def visit_mem_access(tree: Union[Variable, Expression, Statement]):
         return []
 
 
-def get_memory_access(model: MemoryModel)-> \
+def get_memory_access(model: MemoryModel) -> \
         Dict[str, List[Tuple[Memory.MemoryAccess, Memory.MemoryAccessType]]]:
     statements = model.produce_statements()
     # recursive visit the statements
