@@ -8,7 +8,7 @@ install:
     - pip install -e .
 
 script:
-    - pytest --codestyle
+    - pytest --codestyle karst
              --cov karst
              --cov-report=xml
              -v --cov-report term-missing tests
