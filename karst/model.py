@@ -213,9 +213,9 @@ class MemoryModel:
         return item in self._variables or item in self._ports or \
                item in self._config_vars
 
-    def define_if(self, predicate: Union[Expression, bool], expr: Expression):
+    def define_if(self, predicate: Union[Expression, bool], *expr: Expression):
         if_ = If(self)
-        return if_(predicate, expr)
+        return if_(predicate, *expr)
 
     def define_return(self, value: Union[List[Value], Value]):
         return_ = ReturnStatement(value, self)

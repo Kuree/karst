@@ -21,7 +21,7 @@ class If(Statement):
         num_statements = len(self.expressions)
         for i in range(num_statements):
             # the last one is the if statement
-            assert self.parent.context[-2].eq(self.expressions[-i])
+            assert self.parent.context[-2].eq(self.expressions[-(i + 1)])
             self.parent.context.pop(-2)
         return self
 

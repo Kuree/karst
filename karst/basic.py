@@ -186,9 +186,11 @@ def define_row_buffer():
             rb_model.valid = (((write_addr - read_addr +
                                 memory_size) % memory_size) > depth) & wen
 
-            rb_model.data_out = rb_model[read_addr]
             if write_addr - read_addr > rb_model.depth:
+                rb_model.data_out = rb_model[read_addr]
                 rb_model.read_addr = (rb_model.read_addr + 1) % memory_size
+            else:
+                rb_model.data_out = 0
 
             return rb_model.data_out
 
