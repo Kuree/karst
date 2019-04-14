@@ -1,4 +1,5 @@
-from karst.basic import define_sram, define_fifo, define_line_buffer
+from karst.basic import define_sram, define_fifo, define_line_buffer, \
+    define_row_buffer
 from karst.model import MemoryModel, define_memory
 
 
@@ -62,8 +63,34 @@ def test_line_buffer():
     lb.data_in = 44
     lb.enqueue()
     lb.data_in = 45
+    lb.enqueue()
+    lb.data_in = 46
     outs = lb.enqueue()
     assert outs[0] == 42 and outs[1] == 44
+    lb.data_in = 47
+    outs = lb.enqueue()
+    assert outs[0] == 43 and outs[1] == 45
+
+
+def test_row_buffer():
+    rb = define_row_buffer()
+    rb.configure(memory_size=64, depth=4)
+    # enable the wen
+    rb.wen = 1
+    rb.data_in = 42
+    rb.enqueue()
+    rb.data_in = 43
+    rb.enqueue()
+    rb.data_in = 44
+    assert rb.valid == 0
+    rb.enqueue()
+    rb.data_in = 45
+    rb.enqueue()
+    assert rb.valid == 0
+    rb.data_in = 46
+    data_out = rb.enqueue()
+    assert data_out == 42
+    assert rb.valid == 1
 
 
 def test_generic_memory():
@@ -74,7 +101,7 @@ def test_generic_memory():
         a = mem.Variable("a", 2, 0)
         mem.Constant("b", 1)
         a_ = mem.Variable("a", 2, 0)
-        c_ = mem.Variable("c", 16, 0)
+        mem.Variable("c", 16, 0)
         assert a == a_
 
         @mem.action(en_port_name="en", rdy_port_name="rdy")

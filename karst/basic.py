@@ -141,7 +141,7 @@ def define_line_buffer():
                                            lb_model.depth * idx)
                                           % lb_model.memory_size]
 
-            if write_addr - read_addr > lb_model.memory_size:
+            if write_addr - read_addr > lb_model.depth * lb_model.num_rows:
                 lb_model.read_addr = (lb_model.read_addr
                                       + 1) % lb_model.memory_size
 
@@ -157,3 +157,49 @@ def define_line_buffer():
 
         return lb_model
     return line_buffer()
+
+
+def define_row_buffer():
+    @define_memory
+    def row_buffer():
+        rb_model = MemoryModel()
+
+        rb_model.PortIn("data_in", 16)
+        rb_model.PortOut("data_out", 16)
+        rb_model.PortOut("valid", 1)
+        wen = rb_model.PortIn("wen", 1)
+
+        # state control variables
+        read_addr = rb_model.Variable("read_addr", 16, 0)
+        write_addr = rb_model.Variable("write_addr", 16, 0)
+
+        depth = rb_model.Configurable("depth", 16)
+        memory_size = rb_model["memory_size"]
+
+        @rb_model.action(en_port_name="wen")
+        def enqueue():
+            rb_model[rb_model.write_addr] = rb_model.data_in
+
+            # state update
+            rb_model.write_addr = (rb_model.write_addr + 1) % memory_size
+
+            rb_model.valid = (((write_addr - read_addr +
+                                memory_size) % memory_size) > depth) & wen
+
+            rb_model.data_out = rb_model[read_addr]
+            if write_addr - read_addr > rb_model.depth:
+                rb_model.read_addr = (rb_model.read_addr + 1) % memory_size
+
+            return rb_model.data_out
+
+        @rb_model.action(en_port_name="reset")
+        @rb_model.async_reset
+        def reset():
+            rb_model.read_addr = 0
+            rb_model.write_addr = 0
+            # line buffer is already ready to enqueue
+            rb_model.RDY_enqueue = 1
+
+        return rb_model
+
+    return row_buffer()
