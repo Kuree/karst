@@ -94,13 +94,13 @@ class MemoryModel:
     def get_variables(self) -> Dict[str, Variable]:
         return self._variables
 
-    def get_ports(self) -> Dict[str, Variable]:
+    def get_ports(self) -> Dict[str, Port]:
         return self._ports
 
     def get_global_stmts(self) -> List[Statement]:
         return self._global_stmts
 
-    def get_config_vars(self):
+    def get_config_vars(self) -> Dict[str, Configurable]:
         return self._config_vars
 
     def define_variable(self, name: str, bit_width: int,
