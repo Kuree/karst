@@ -36,12 +36,18 @@ class MemoryCore:
 
         self.memory_size = memory_size
 
+        self._action_names = {
+            MemoryMode.SRAM: {"wen": "write", "ren": "read"},
+            MemoryMode.FIFO: {"wen": "enqueue", "ren": "dequeue"},
+            MemoryMode.RowBuffer: {"wen": "enqueue"}}
+
         # get all the configurables
         self.config_vars: Dict[str, Configurable] = {}
         # ports
         self.ports: Dict[str, Port] = {}
 
         self._mem: Union[MemoryModel, None] = None
+        self._instr: Union[MemoryInstruction, None] = None
 
     def __get_vars(self, model: MemoryModel):
         self.config_vars.clear()
@@ -69,16 +75,24 @@ class MemoryCore:
         values[MemoryModel.MEMORY_SIZE] = self.memory_size
         self._mem.configure(**values)
         self.__get_vars(self._mem)
+        self._instr = instr
 
     def eval(self, **kargs):
-        assert "action" in kargs
-        action_name = kargs["action"]
         for name, value in kargs.items():
             if name in self.ports \
                     and self.ports[name].port_type == PortType.In:
-                self.ports[name] = value
+                self.ports[name](value).eval()
+        actions = set()
+        # figure out which action to trigger
+        for name, var in self.ports.items():
+            if name[:3] == "EN_":
+                var_name = var.name
+                if var.eval() == 1:
+                    action_map = self._action_names[self._instr.memory_mode]
+                    actions.add(action_map[var_name])
 
-        self._mem[action_name]()
+        for action_name in actions:
+            self._mem[action_name]()
         result = {}
         for name, var in self.ports.items():
             if var.port_type == PortType.Out:

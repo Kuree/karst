@@ -62,7 +62,7 @@ def define_fifo():
         fifo_model.Configurable("almost_t", 16, delay_threshold)
         fifo_model.Configurable("capacity", 16)
 
-        @fifo_model.action()
+        @fifo_model.action(en_port_name="wen")
         def enqueue():
             fifo_model[fifo_model.write_addr] = fifo_model.data_in
             # state update
@@ -74,7 +74,7 @@ def define_fifo():
             # the function calls will be executed as normal python code
             update_state()
 
-        @fifo_model.action()
+        @fifo_model.action(en_port_name="ren")
         def dequeue():
             fifo_model.data_out = fifo_model[fifo_model.read_addr]
             # state update
