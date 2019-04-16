@@ -128,3 +128,10 @@ def test_generic_memory():
     assert model.get_action_names() == ["test"]
 
     assert model.model_name == "mem"
+
+
+def test_model_debug():
+    mem = MemoryModel(8)
+    mem.write_to_mem(2, 42)
+    assert mem.read_from_mem(2) == 42
+    assert mem.read_from_mem(3) == 0

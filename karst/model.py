@@ -335,6 +335,15 @@ class MemoryModel:
     def get_loop_vars(self):
         return self._loop_vars.copy()
 
+    # debugging methods
+    # these are eager eval
+    def write_to_mem(self, index: int, value: int):
+        var = self._mem[Const(index)](value)
+        var.eval()
+
+    def read_from_mem(self, index):
+        return self._mem[Const(index)].eval()
+
     # alias
     Variable = define_variable
     PortIn = define_port_in
