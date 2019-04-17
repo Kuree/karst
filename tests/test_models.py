@@ -1,5 +1,4 @@
-from karst.basic import define_sram, define_fifo, define_line_buffer, \
-    define_row_buffer
+from karst.basic import *
 from karst.model import MemoryModel, define_memory
 
 
@@ -180,3 +179,11 @@ def test_two_bank():
     mem.select = 0
     mem.write()
     assert mem.read_from_mem(2, 0) == 100
+
+
+def test_double_buffer():
+    db = define_double_buffer()
+    db.configure(memory_size=64)
+    db.ren = 1
+
+    db.read()

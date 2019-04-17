@@ -210,21 +210,52 @@ def define_row_buffer():
 def define_double_buffer():
     @define_memory
     def double_buffer():
-        db = MemoryModel(num_memory=2)
+        db = MemoryModel(size=2, num_memory=2)
 
         read_addr = db.Variable("read_addr", 16)
+        cin_off = db.Variable("cin_off", 16)
         write_addr = db.Variable("write_addr", 16)
+
+        # iter
+        x_iter = db.Variable("x_iter", 16)
+        y_iter = db.Variable("y_iter", 16)
+        x_off = db.Variable("x_off", 16)
+        y_off = db.Variable("y_off", 16)
 
         data_in = db.PortIn("data_in", 16)
         data_out = db.PortOut("data_out", 16)
+        db.PortIn("ren", 1)
 
         select = db.Variable("select", 1, 0)
         threshold = db.Configurable("threshold", 16)
+        ext_chin = db.Configurable("ext_chin", 16)
+        off_x = db.Configurable("off_x", 16)
+        off_y = db.Configurable("off_y", 16)
+        ext_chout = db.Configurable("ext_chout", 16)
+        ext_x = db.Configurable("ext_x", 16)
+        bound_ch = db.Configurable("bound_ch", 16)
+        bound_x = db.Configurable("bound_x", 16)
+
+        db.read_addr = cin_off + (x_iter + x_off)
 
         @db.mark
         def switch():
             if write_addr >= threshold:
                 db.select = select ^ 1
+
+        @db.action(en_port_name="ren")
+        def read():
+            db.data_out = db[(select, read_addr)]
+            db.cin_off = db.cin_off + 1
+
+            if db.cin_off == db.ext_chin:
+                db.cin_off = 0
+                db.x_off = db.x_off + 1
+                if db.x_off == db.off_x:
+                    db.x_off = 0
+                    db.y_off = db.y_off + 1
+                    if db.y_off == db.off_y:
+                        db.y_off = 0
 
         return db
     return double_buffer()
