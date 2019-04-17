@@ -110,6 +110,7 @@ class MemoryModel:
         assert size % num_memory == 0, "can't divide the memory evenly"
         self._mem: List[Memory] = [Memory(size // num_memory, self)
                                    for _ in range(num_memory)]
+        self._num_memory = num_memory
 
         self._stmts = {}
         self._global_stmts = []
@@ -183,8 +184,11 @@ class MemoryModel:
     def configure(self, **kwargs):
         for key, value in kwargs.items():
             if key == self.MEMORY_SIZE:
+                memory_size = value
+                assert memory_size % self._num_memory == 0
+                mem_size = memory_size // self._num_memory
                 for mem in self._mem:
-                    mem.resize(value)
+                    mem.resize(mem_size)
             self._config_vars[key].value = value
 
         for _, func in self._preprocess.items():
