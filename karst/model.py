@@ -58,11 +58,46 @@ class Memory:
             return isinstance(other, Memory.MemoryAccess) and\
                    self.mem == other.mem and self.var == other.var
 
+    class MemoryBankAccess(MemoryAccess):
+        # this allows switching banks at run time
+        def __init__(self, mems: List["Memory"], index: Value, var: Value,
+                     parent):
+            super().__init__(mems[0], var, parent)
+            self.index: Union[Value, int] = index
+            self._mems = mems
+
+        def eval(self):
+            index = self.index.eval() if isinstance(self.index, Value) else \
+                int(self.index)
+            return self._mems[index][self.var].eval()
+
+        def __call__(self, other: Union[Value, int]):
+            if isinstance(other, Value):
+                value = other.eval()
+            else:
+                value = other
+            index = self.var.eval()
+            mem_index = self.index.eval() if isinstance(self.index, Value)\
+                else int(self.index)
+            self._mems[mem_index]._data[index] = value
+            return AssignStatement(self, other, self.parent)
+
+        def __repr__(self):
+            return f"memory[{self.index.name}][{self.var.name}]"
+
+        def copy(self):
+            return Memory.MemoryBankAccess(self._mems, self.index, self.var,
+                                           self.parent)
+
+        def eq(self, other: "Value"):
+            return isinstance(other, Memory.MemoryBankAccess) and\
+                   self._mems == other._mems and self.var == other.var
+
 
 class MemoryModel:
     MEMORY_SIZE = "memory_size"
 
-    def __init__(self, size: int = 1):
+    def __init__(self, size: int = 1, num_memory: int = 1):
         self._initialized = False
         self._variables = {}
         self._ports = {}
@@ -72,7 +107,9 @@ class MemoryModel:
         self._preprocess = {}
 
         self._actions = {}
-        self._mem = Memory(size, self)
+        assert size % num_memory == 0, "can't divide the memory evenly"
+        self._mem: List[Memory] = [Memory(size // num_memory, self)
+                                   for _ in range(num_memory)]
 
         self._stmts = {}
         self._global_stmts = []
@@ -146,7 +183,8 @@ class MemoryModel:
     def configure(self, **kwargs):
         for key, value in kwargs.items():
             if key == self.MEMORY_SIZE:
-                self._mem.resize(value)
+                for mem in self._mem:
+                    mem.resize(value)
             self._config_vars[key].value = value
 
         for _, func in self._preprocess.items():
@@ -168,14 +206,21 @@ class MemoryModel:
 
     def __getitem__(self, item):
         if isinstance(item, Value):
-            return self._mem[item]
+            return self._mem[0][item]
+        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[0],
+                                                                       Value):
+            return Memory.MemoryBankAccess(self._mem, item[0], item[1], self)
         else:
             assert isinstance(item, str)
             return getattr(self, item)
 
     def __setitem__(self, key, value):
         if isinstance(key, Value):
-            self._mem[key](value)
+            return self._mem[0][key](value)
+        elif isinstance(key, tuple) and len(key) == 2 and isinstance(key[0],
+                                                                     Value):
+            return Memory.MemoryBankAccess(self._mem, key[0], key[1],
+                                           self)(value)
         else:
             return setattr(self, key, value)
 
@@ -337,12 +382,12 @@ class MemoryModel:
 
     # debugging methods
     # these are eager eval
-    def write_to_mem(self, index: int, value: int):
-        var = self._mem[Const(index)](value)
+    def write_to_mem(self, index: int, value: int, mem_index: int = 0):
+        var = self._mem[mem_index][Const(index)](value)
         var.eval()
 
-    def read_from_mem(self, index):
-        return self._mem[Const(index)].eval()
+    def read_from_mem(self, index: int, mem_index: int = 0):
+        return self._mem[mem_index][Const(index)].eval()
 
     # alias
     Variable = define_variable

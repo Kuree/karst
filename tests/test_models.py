@@ -135,3 +135,48 @@ def test_model_debug():
     mem.write_to_mem(2, 42)
     assert mem.read_from_mem(2) == 42
     assert mem.read_from_mem(3) == 0
+
+
+def test_two_bank():
+    # just to test the interface
+    @define_memory
+    def define_two_bank():
+        model = MemoryModel(8, 2)
+        select = model.PortIn("select", 1)
+        read_addr = model.PortIn("read_addr", 3)
+        write_addr = model.PortIn("write_addr", 3)
+        data_in = model.PortIn("data_in", 16)
+        model.PortOut("data_out", 16)
+
+        @model.action()
+        def read():
+            model.data_out = model[(select, read_addr)]
+            return model.data_out
+
+        @model.action()
+        def write():
+            model[(select, write_addr)] = data_in
+
+        return model
+
+    mem = define_two_bank()
+
+    mem.write_to_mem(2, 42, 0)
+    mem.write_to_mem(3, 43, 1)
+
+    mem.RDY_read = 1
+    mem.read_addr = 2
+    val = mem.read()
+    assert val == 42
+    mem.read_addr = 3
+    mem.select = 1
+    val = mem.read()
+    assert val == 43
+
+    # write
+    mem.RDY_write = 1
+    mem.write_addr = 2
+    mem.data_in = 100
+    mem.select = 0
+    mem.write()
+    assert mem.read_from_mem(2, 0) == 100
