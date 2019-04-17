@@ -213,34 +213,38 @@ def define_double_buffer():
         db = MemoryModel(size=2, num_memory=2)
 
         read_addr = db.Variable("read_addr", 16)
-        cin_off = db.Variable("cin_off", 16)
         write_addr = db.Variable("write_addr", 16)
 
         # iter
+        cin_off = db.Variable("cin_off", 16)
         x_iter = db.Variable("x_iter", 16)
         y_iter = db.Variable("y_iter", 16)
         x_off = db.Variable("x_off", 16)
         y_off = db.Variable("y_off", 16)
+        cout_off = db.Variable("cout_off", 16)
 
         data_in = db.PortIn("data_in", 16)
-        data_out = db.PortOut("data_out", 16)
+        db.PortOut("data_out", 16)
         db.PortIn("ren", 1)
+        db.PortIn("wen", 1)
 
         select = db.Variable("select", 1, 0)
         threshold = db.Configurable("threshold", 16)
-        ext_chin = db.Configurable("ext_chin", 16)
-        off_x = db.Configurable("off_x", 16)
-        off_y = db.Configurable("off_y", 16)
-        ext_chout = db.Configurable("ext_chout", 16)
-        ext_x = db.Configurable("ext_x", 16)
+        db.Configurable("ext_chin", 16)
+        db.Configurable("off_x", 16)
+        db.Configurable("off_y", 16)
+        db.Configurable("ext_chout", 16)
+        db.Configurable("ext_x", 16)
         bound_ch = db.Configurable("bound_ch", 16)
         bound_x = db.Configurable("bound_x", 16)
+        stride = db.Configurable("stride", 16, 1)
 
-        db.read_addr = cin_off + (x_iter + x_off)
+        db.read_addr = cin_off + (x_iter + x_off) * bound_ch +\
+            (y_iter + y_off) * bound_ch * bound_x
 
         @db.mark
         def switch():
-            if write_addr >= threshold:
+            if (db.write_addr == threshold - 1) and (db.iter == threshold - 1):
                 db.select = select ^ 1
 
         @db.action(en_port_name="ren")
@@ -256,6 +260,25 @@ def define_double_buffer():
                     db.y_off = db.y_off + 1
                     if db.y_off == db.off_y:
                         db.y_off = 0
+                        db.cout_off = cout_off + 1
+                        if db.cout_off == db.ext_chout:
+                            db.cout_off = 0
+                            db.x_iter = x_iter + stride
+                            if db.x_iter == db.ext_x:
+                                db.x_iter = 0
+                                db.y_iter = y_iter + stride
+            switch()
+
+        @db.action(en_port_name="wen")
+        def write():
+            db[write_addr] = data_in
+            db.write_addr = db.write_addr + 1
+
+            switch()
+
+        # global updates
+        db.RDY_write = write_addr < threshold
+        db.RDY_read = y_iter < threshold
 
         return db
     return double_buffer()
