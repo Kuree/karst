@@ -205,3 +205,26 @@ def define_row_buffer():
         return rb_model
 
     return row_buffer()
+
+
+def define_double_buffer():
+    @define_memory
+    def double_buffer():
+        db = MemoryModel(num_memory=2)
+
+        read_addr = db.Variable("read_addr", 16)
+        write_addr = db.Variable("write_addr", 16)
+
+        data_in = db.PortIn("data_in", 16)
+        data_out = db.PortOut("data_out", 16)
+
+        select = db.Variable("select", 1, 0)
+        threshold = db.Configurable("threshold", 16)
+
+        @db.mark
+        def switch():
+            if write_addr >= threshold:
+                db.select = select ^ 1
+
+        return db
+    return double_buffer()

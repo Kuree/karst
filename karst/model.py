@@ -68,7 +68,7 @@ class Memory:
 
         def eval(self):
             index = self.index.eval() if isinstance(self.index, Value) else \
-                int(self.index)
+                self.index
             return self._mems[index][self.var].eval()
 
         def __call__(self, other: Union[Value, int]):
@@ -78,7 +78,7 @@ class Memory:
                 value = other
             index = self.var.eval()
             mem_index = self.index.eval() if isinstance(self.index, Value)\
-                else int(self.index)
+                else self.index
             self._mems[mem_index]._data[index] = value
             return AssignStatement(self, other, self.parent)
 
@@ -211,8 +211,7 @@ class MemoryModel:
     def __getitem__(self, item):
         if isinstance(item, Value):
             return self._mem[0][item]
-        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[0],
-                                                                       Value):
+        elif isinstance(item, tuple) and len(item) == 2:
             return Memory.MemoryBankAccess(self._mem, item[0], item[1], self)
         else:
             assert isinstance(item, str)
@@ -221,8 +220,7 @@ class MemoryModel:
     def __setitem__(self, key, value):
         if isinstance(key, Value):
             return self._mem[0][key](value)
-        elif isinstance(key, tuple) and len(key) == 2 and isinstance(key[0],
-                                                                     Value):
+        elif isinstance(key, tuple) and len(key) == 2:
             return Memory.MemoryBankAccess(self._mem, key[0], key[1],
                                            self)(value)
         else:
