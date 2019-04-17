@@ -48,6 +48,14 @@ class IfNodeVisitor(ast.NodeTransformer):
         expression = node.body
         else_expression = node.orelse
 
+        # recursive call
+        for idx, node in enumerate(expression):
+            if_exp = IfNodeVisitor(self.model_name, self.predicate_model_name)
+            expression[idx] = if_exp.visit(node)
+        for idx, node in enumerate(else_expression):
+            else_exp = IfNodeVisitor(self.model_name, self.predicate_model_name)
+            else_expression[idx] = else_exp.visit(node)
+
         if_node = ast.Call(func=ast.Attribute(value=ast.Name(id=self.model_name,
                                                              ctx=ast.Load()),
                                               attr="If",
