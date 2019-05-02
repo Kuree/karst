@@ -328,9 +328,10 @@ class MemoryModel:
         return self._stmts
 
     def __eval_stmts(self, action_name: str):
+        if action_name not in self._stmts:
+            self.produce_statements()
+
         def wrapper():
-            if action_name not in self._stmts:
-                self.produce_statements()
             # use READY signal here
             # only execute the statement if it's valid
             ready_signal = self[f"RDY_{action_name}"]
@@ -387,6 +388,8 @@ class MemoryModel:
     def write_to_mem(self, index: int, value: int, mem_index: int = 0):
         var = self._mem[mem_index][Const(index)](value)
         var.eval()
+        self.context.clear()
+        pass
 
     def read_from_mem(self, index: int, mem_index: int = 0):
         return self._mem[mem_index][Const(index)].eval()

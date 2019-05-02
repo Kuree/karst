@@ -53,6 +53,9 @@ class MemoryCore:
         self._mem: Union[MemoryModel, None] = None
         self._instr: Union[MemoryInstruction, None] = None
 
+        # depends on the latency, we may latch out the data for next cycle
+        self._last_values = {}
+
     def __get_vars(self, model: MemoryModel):
         self.config_vars.clear()
         self.ports.clear()
@@ -80,6 +83,7 @@ class MemoryCore:
         self._mem.configure(**values)
         self.__get_vars(self._mem)
         self._instr = instr
+        self._mem.produce_statements()
         # write to memory
         for addr, data in instr.data_entries:
             self._mem.write_to_mem(addr, data)
@@ -105,4 +109,8 @@ class MemoryCore:
             if var.port_type == PortType.Out:
                 result[name] = var.eval()
 
+        if self._instr.memory_mode == MemoryMode.SRAM:
+            temp = self._last_values
+            self._last_values = result
+            return temp
         return result
