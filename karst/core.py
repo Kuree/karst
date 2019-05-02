@@ -1,7 +1,7 @@
 from .basic import define_row_buffer, define_sram, define_fifo
 from .model import MemoryModel
 from .values import Configurable, Port, Value, PortType
-from typing import Dict, Union
+from typing import Dict, Union, Tuple, List
 import enum
 
 
@@ -14,11 +14,15 @@ class MemoryMode(enum.Enum):
 
 class MemoryInstruction:
     def __init__(self, memory_mode: MemoryMode,
-                 values: Dict[str, int] = None):
+                 values: Dict[str, int] = None,
+                 data_entries: List[Tuple[int, int]] = None):
         self.memory_mode = memory_mode
         if values is None:
             values = {}
         self.values = values
+        if data_entries is None:
+            data_entries = []
+        self.data_entries = data_entries
 
 
 class MemoryCore:
@@ -76,6 +80,9 @@ class MemoryCore:
         self._mem.configure(**values)
         self.__get_vars(self._mem)
         self._instr = instr
+        # write to memory
+        for addr, data in instr.data_entries:
+            self._mem.write_to_mem(addr, data)
 
     def eval(self, **kargs):
         for name, value in kargs.items():

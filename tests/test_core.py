@@ -20,3 +20,11 @@ def test_row_buffer_core(memory_core):
         if i >= depth:
             data_out = result["data_out"]
             assert data_out == i - depth
+
+    # also test if we can directly configure the address
+    data_entries = [(i, i + 42) for i in range(42)]
+    instr = MemoryInstruction(MemoryMode.SRAM, data_entries=data_entries)
+    memory_core.configure(instr)
+
+    for i in range(42):
+        assert memory_core._mem.read_from_mem(i) == i + 42
