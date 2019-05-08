@@ -183,7 +183,22 @@ def test_two_bank():
 
 def test_double_buffer():
     db = define_double_buffer()
-    db.configure(memory_size=64)
-    db.ren = 1
+    db.configure(memory_size=1024,
+                 threshold=512,
+                 ext_chin=4,
+                 off_x=3,
+                 off_y=3,
+                 ext_chout=4,
+                 ext_x=32,
+                 bound_ch=4,
+                 bound_x=4,
+                 stride=1)
+    db.reset()
+    # test write switch banks
+    db.wen = 1
+    for i in range(512):
+        db.data_in = i
+        db.write()
+        index = 0 if i < 512 else 1
+        assert db.read_from_mem(i % 512, index) == i
 
-    db.read()

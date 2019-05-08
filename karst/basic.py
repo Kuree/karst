@@ -244,7 +244,8 @@ def define_double_buffer():
 
         @db.mark
         def switch():
-            if (db.write_addr == threshold - 1) and (db.iter == threshold - 1):
+            if (db.write_addr >= threshold - 1) \
+                    and (db.y_iter >= threshold - 1):
                 db.select = select ^ 1
 
         @db.action(en_port_name="ren")
@@ -272,9 +273,23 @@ def define_double_buffer():
         @db.action(en_port_name="wen")
         def write():
             db[write_addr] = data_in
-            db.write_addr = db.write_addr + 1
+            db.write_addr = (db.write_addr + 1) % db.memory_size
 
             switch()
+
+        @db.action(en_port_name="reset")
+        @db.async_reset
+        def reset():
+            db.write_addr = 0
+            db.RDY_write = 1
+            db.RDY_read = 1
+            db.ren = 1
+            db.cin_off = 0
+            db.x_iter = 0
+            db.y_iter = 0
+            db.x_off = 0
+            db.y_off = 0
+            db.cout_off = 0
 
         # global updates
         db.RDY_write = write_addr < threshold
