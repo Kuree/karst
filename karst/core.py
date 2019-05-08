@@ -1,4 +1,5 @@
-from .basic import define_row_buffer, define_sram, define_fifo
+from .basic import define_row_buffer, define_sram, define_fifo,\
+    define_double_buffer
 from .model import MemoryModel
 from .values import Configurable, Port, Value, PortType
 from typing import Dict, Union, Tuple, List
@@ -7,9 +8,10 @@ import enum
 
 @enum.unique
 class MemoryMode(enum.Enum):
-    SRAM = enum.auto()
-    FIFO = enum.auto()
-    RowBuffer = enum.auto()
+    SRAM = 0
+    FIFO = 1
+    RowBuffer = 2
+    DoubleBuffer = 3
 
 
 class MemoryInstruction:
@@ -33,10 +35,14 @@ class MemoryCore:
         self._sram = define_sram()
         self._fifo = define_fifo()
         self._row_buffer = define_row_buffer()
+        self._double_buffer = define_double_buffer()
 
-        self._models = {MemoryMode.SRAM: self._sram,
-                        MemoryMode.FIFO: self._fifo,
-                        MemoryMode.RowBuffer: self._row_buffer}
+        self._models: Dict[MemoryMode, MemoryModel] = {
+            MemoryMode.SRAM: self._sram,
+            MemoryMode.FIFO: self._fifo,
+            MemoryMode.RowBuffer: self._row_buffer,
+            MemoryMode.DoubleBuffer: self._double_buffer
+        }
 
         self.memory_size = memory_size
 
@@ -55,6 +61,23 @@ class MemoryCore:
 
         # depends on the latency, we may latch out the data for next cycle
         self._last_values = {}
+
+        # compute the address space
+        # notice that we need multiple feature spaces
+        # config_regs
+        self._config_regs = []
+        mode_keys = list(self._models.keys())
+        mode_keys.sort(key=lambda m: m.value)
+        for mode in mode_keys:
+            model: MemoryModel = self._models[mode]
+            vars = []
+            for var_name in model.get_config_vars():
+                if var_name == MemoryModel.MEMORY_SIZE:
+                    continue
+                assert var_name not in self._config_regs
+                vars.append(var_name)
+            vars.sort()
+            self._config_regs += vars
 
     def __get_vars(self, model: MemoryModel):
         self.config_vars.clear()
@@ -113,4 +136,16 @@ class MemoryCore:
             temp = self._last_values
             self._last_values = result
             return temp
+        return result
+
+    def get_bitstream(self, instr: MemoryInstruction):
+        # the first register is always the mode
+        result = [(0, instr.memory_mode.value)]
+        for var, value in instr.values.items():
+            assert var in self._config_regs
+            index = self._config_regs.index(var) + 1
+            result.append((index, value))
+        # TODO:
+        # need to figure out how to deal with multiple features
+
         return result

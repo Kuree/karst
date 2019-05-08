@@ -28,3 +28,13 @@ def test_row_buffer_core(memory_core):
 
     for i in range(42):
         assert memory_core._mem.read_from_mem(i) == i + 42
+
+
+def test_bitstream(memory_core):
+    capacity = 128
+    instr = MemoryInstruction(MemoryMode.FIFO, {"capacity": capacity})
+    bitstream = memory_core.get_bitstream(instr)
+    assert len(bitstream) == 2
+    ins1, ins2 = bitstream
+    assert ins1[0] == 0 and ins1[1] == MemoryMode.FIFO.value
+    assert ins2[0] == 2 and ins2[1] == capacity

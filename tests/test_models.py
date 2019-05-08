@@ -201,4 +201,3 @@ def test_double_buffer():
         db.write()
         index = 0 if i < 512 else 1
         assert db.read_from_mem(i % 512, index) == i
-
